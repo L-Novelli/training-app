@@ -7,5 +7,5 @@ import tailwindcss from '@tailwindcss/vite'
 // If you deploy to https://<username>.github.io/ (a user/org page repo named <username>.github.io) set base to '/'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/training-app/',
+  base: 'https://l-novelli.github.io/training-app/',
 })
