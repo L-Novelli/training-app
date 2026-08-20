@@ -1,81 +1,98 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
-import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../supabaseClient'
 
-export function AdminPrograms() {
-  const { profile } = useAuth()
+export default function AdminPrograms() {
   const [programs, setPrograms] = useState([])
-  const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
-  const [creating, setCreating] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fetching, setFetching] = useState(true)
 
-  const loadPrograms = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('programs')
-      .select('*, workouts(count), assignments(count)')
-      .order('created_at', { ascending: false })
-    if (error) setError(error.message)
-    else setPrograms(data)
-    setLoading(false)
-  }
+  useEffect(() => {
+    fetchPrograms()
+  }, [])
 
-  useEffect(() => { loadPrograms() }, [])
+  async function fetchPrograms() {
+    setFetching(true)
+    setError('')
+    try {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-  const handleCreate = async (e) => {
-    e.preventDefault()
-    if (!name.trim()) return
-    setCreating(true)
-    const { error } = await supabase
-      .from('programs')
-      .insert({ name: name.trim(), created_by: profile.id })
-    setCreating(false)
-    if (error) {
-      setError(error.message)
-    } else {
-      setName('')
-      loadPrograms()
+      if (error) throw error
+      setPrograms(data || [])
+    } catch (err) {
+      console.error('Fetch programs error:', err)
+      setError(err.message || 'Failed to load programs.')
+    } finally {
+      setFetching(false)
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this program and all its workouts, exercises, assignments, and logs?')) return
-    const { error } = await supabase.from('programs').delete().eq('id', id)
-    if (error) setError(error.message)
-    else loadPrograms()
+  async function handleCreate(e) {
+    e.preventDefault()
+    setError('')
+
+    if (!name.trim()) {
+      setError('Program name cannot be empty.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) throw userError
+
+      const { error } = await supabase
+        .from('programs')
+        .insert([{ name: name.trim(), created_by: userData.user.id }])
+
+      if (error) throw error
+
+      setName('')
+      await fetchPrograms()
+    } catch (err) {
+      console.error('Create program error:', err)
+      setError(err.message || 'Failed to create program. Check console for details.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold tracking-wide">Programs</h1>
-      </div>
+    <div className="max-w-3xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Programs</h1>
 
-      <form onSubmit={handleCreate} className="mb-8 flex gap-2">
+      {error && (
+        <div className="bg-red-900/40 border border-red-600 text-red-200 px-4 py-2 rounded mb-4">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleCreate} className="flex gap-2 mb-6">
         <input
           type="text"
-          placeholder="New program name, e.g. 12-Week Strength Block"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="flex-1 rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
+          placeholder="New program name, e.g. 12-Week Strength Block"
+          className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-gray-100"
         />
         <button
           type="submit"
-          disabled={creating}
-          className="rounded bg-cobalt px-4 py-2 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          disabled={loading}
+          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded"
         >
-          {creating ? 'Creating…' : 'Create program'}
+          {loading ? 'Creating...' : 'Create program'}
         </button>
       </form>
 
-      {error && <p className="mb-4 text-sm text-danger">{error}</p>}
-
-      {loading ? (
-        <p className="text-muted font-mono text-sm">Loading…</p>
+      {fetching ? (
+        <p className="text-gray-400">Loading programs...</p>
       ) : programs.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-line p-8 text-center text-muted">
+        <div className="border border-dashed border-gray-700 rounded p-8 text-center text-gray-500">
           No programs yet. Create one above to start building a training plan.
         </div>
       ) : (
@@ -83,28 +100,15 @@ export function AdminPrograms() {
           {programs.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between rounded-lg border border-line bg-panel px-4 py-3"
+              className="bg-gray-800 border border-gray-700 rounded px-4 py-3 flex justify-between items-center"
             >
-              <Link to={`/admin/programs/${p.id}`} className="flex-1">
-                <div className="font-semibold text-chalk">{p.name}</div>
-                <div className="mt-0.5 font-mono text-xs text-muted">
-                  {p.workouts?.[0]?.count ?? 0} workouts · {p.assignments?.[0]?.count ?? 0} assigned
-                </div>
+              <span>{p.name}</span>
+              <Link
+                to={`/admin/programs/${p.id}`}
+                className="text-indigo-400 hover:text-indigo-300 text-sm"
+              >
+                Edit →
               </Link>
-              <div className="flex gap-2">
-                <Link
-                  to={`/admin/programs/${p.id}`}
-                  className="rounded border border-line px-3 py-1.5 text-sm text-chalk-dim hover:border-cobalt hover:text-chalk"
-                >
-                  Edit
-                </Link>
-                <button
-                  onClick={() => handleDelete(p.id)}
-                  className="rounded border border-line px-3 py-1.5 text-sm text-chalk-dim hover:border-danger hover:text-danger"
-                >
-                  Delete
-                </button>
-              </div>
             </li>
           ))}
         </ul>
