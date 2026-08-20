@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
-export default function AdminPrograms() {
+export function AdminPrograms()  {
   const [programs, setPrograms] = useState([])
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
