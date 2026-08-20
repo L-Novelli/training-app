@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #14161b;
+  --color-panel: #1c1f26;
+  --color-panel-raised: #242833;
+  --color-line: #2e3340;
+  --color-chalk: #f0ede4;
+  --color-chalk-dim: #a8acb8;
+  --color-muted: #8a8f9c;
+  --color-cobalt: #3d5afe;
+  --color-cobalt-dim: #24336b;
+  --color-brass: #d99a3d;
+  --color-danger: #e5533d;
+
+  --font-display: 'Big Shoulders Display', sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-chalk);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-cobalt);
+  color: white;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cobalt);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
