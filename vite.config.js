@@ -9,4 +9,3 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: '/training-app/',
 })
-//testtest
