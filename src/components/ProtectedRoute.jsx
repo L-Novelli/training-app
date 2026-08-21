@@ -7,7 +7,7 @@ export function ProtectedRoute({ children, adminOnly = false }) {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center text-muted font-mono text-sm">
-        Loading…
+        Cargando…
       </div>
     )
   }
@@ -20,7 +20,7 @@ export function ProtectedRoute({ children, adminOnly = false }) {
   if (!profile) {
     return (
       <div className="flex h-screen items-center justify-center text-muted font-mono text-sm">
-        Loading…
+        Cargando…
       </div>
     )
   }

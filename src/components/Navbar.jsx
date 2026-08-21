@@ -25,11 +25,11 @@ export function Navbar() {
           <nav className="flex gap-1">
             {isAdmin ? (
               <>
-                <NavLink to="/" end className={linkClass}>Programs</NavLink>
-                <NavLink to="/admin/users" className={linkClass}>Users</NavLink>
+                <NavLink to="/" end className={linkClass}>Programas</NavLink>
+                <NavLink to="/admin/users" className={linkClass}>Usuarios</NavLink>
               </>
             ) : (
-              <NavLink to="/" end className={linkClass}>My Programs</NavLink>
+              <NavLink to="/" end className={linkClass}>Mis Programas</NavLink>
             )}
           </nav>
         </div>
@@ -42,7 +42,7 @@ export function Navbar() {
             onClick={handleSignOut}
             className="rounded border border-line px-3 py-1.5 text-sm text-chalk-dim hover:border-danger hover:text-danger transition-colors"
           >
-            Sign out
+            Cerrar sesión
           </button>
         </div>
       </div>

@@ -27,7 +27,7 @@ export function Signup() {
       // Email confirmation is off — user is signed in immediately.
       navigate('/')
     } else {
-      setNotice('Check your inbox to confirm your email, then sign in.')
+      setNotice('Revisá tu correo para confirmar tu email y después iniciá sesión.')
     }
   }
 
@@ -36,7 +36,7 @@ export function Signup() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="font-display text-4xl font-bold tracking-wide text-chalk">IRONLOG</div>
-          <p className="mt-1 text-sm text-muted">Create your account</p>
+          <p className="mt-1 text-sm text-muted">Creá tu cuenta</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-line bg-panel p-6">
@@ -51,7 +51,7 @@ export function Signup() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Full name</label>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Nombre completo</label>
             <input
               type="text"
               required
@@ -62,7 +62,7 @@ export function Signup() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Email</label>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Correo electrónico</label>
             <input
               type="email"
               required
@@ -73,7 +73,7 @@ export function Signup() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Password</label>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Contraseña</label>
             <input
               type="password"
               required
@@ -89,12 +89,12 @@ export function Signup() {
             disabled={busy}
             className="w-full rounded bg-cobalt py-2.5 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? 'Creating account…' : 'Create account'}
+            {busy ? 'Creando cuenta…' : 'Crear cuenta'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-muted">
-          Already have an account? <Link to="/login" className="text-cobalt hover:underline">Sign in</Link>
+          ¿Ya tenés una cuenta? <Link to="/login" className="text-cobalt hover:underline">Iniciar sesión</Link>
         </p>
       </div>
     </div>

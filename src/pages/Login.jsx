@@ -28,7 +28,7 @@ export function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="font-display text-4xl font-bold tracking-wide text-chalk">IRONLOG</div>
-          <p className="mt-1 text-sm text-muted">Sign in to your training log</p>
+          <p className="mt-1 text-sm text-muted">Iniciá sesión en tu registro de entrenamiento</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-line bg-panel p-6">
@@ -38,7 +38,7 @@ export function Login() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Email</label>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Correo electrónico</label>
             <input
               type="email"
               required
@@ -49,7 +49,7 @@ export function Login() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Password</label>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Contraseña</label>
             <input
               type="password"
               required
@@ -64,12 +64,12 @@ export function Login() {
             disabled={busy}
             className="w-full rounded bg-cobalt py-2.5 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? 'Signing in…' : 'Sign in'}
+            {busy ? 'Iniciando sesión…' : 'Iniciar sesión'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-muted">
-          No account? <Link to="/signup" className="text-cobalt hover:underline">Sign up</Link>
+          ¿No tenés cuenta? <Link to="/signup" className="text-cobalt hover:underline">Registrate</Link>
         </p>
       </div>
     </div>

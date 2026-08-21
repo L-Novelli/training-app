@@ -52,8 +52,8 @@ function ExerciseLogger({ exercise, userId }) {
         <div>
           <div className="font-medium text-chalk">{exercise.name}</div>
           <div className="font-mono text-xs text-muted">
-            {exercise.sets} sets × {exercise.reps} {exercise.target_weight && `@ ${exercise.target_weight}`}
-            {exercise.rest_seconds ? ` · rest ${exercise.rest_seconds}s` : ''}
+            {exercise.sets} series × {exercise.reps} {exercise.target_weight && `@ ${exercise.target_weight}`}
+            {exercise.rest_seconds ? ` · descanso ${exercise.rest_seconds}s` : ''}
           </div>
         </div>
         <span className="text-muted">{open ? '−' : '+'}</span>
@@ -68,7 +68,7 @@ function ExerciseLogger({ exercise, userId }) {
               type="number"
               value={setsCompleted}
               onChange={(e) => setSetsCompleted(e.target.value)}
-              placeholder="Sets"
+              placeholder="Series"
               className="rounded bg-panel px-2 py-1.5 font-mono text-sm text-chalk outline-none focus:ring-1 focus:ring-cobalt"
             />
             <input
@@ -80,7 +80,7 @@ function ExerciseLogger({ exercise, userId }) {
             <input
               value={weightUsed}
               onChange={(e) => setWeightUsed(e.target.value)}
-              placeholder="Weight"
+              placeholder="Peso"
               className="rounded bg-panel px-2 py-1.5 font-mono text-sm text-chalk outline-none focus:ring-1 focus:ring-cobalt"
             />
             <button
@@ -88,19 +88,19 @@ function ExerciseLogger({ exercise, userId }) {
               disabled={saving}
               className="rounded bg-cobalt px-2 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
             >
-              Log
+              Registrar
             </button>
             <input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes (optional)"
+              placeholder="Notas (opcional)"
               className="col-span-4 rounded bg-panel px-2 py-1.5 text-sm text-chalk outline-none focus:ring-1 focus:ring-cobalt"
             />
           </form>
 
           {logs.length > 0 && (
             <div>
-              <div className="mb-1 text-xs uppercase tracking-wide text-muted">Recent logs</div>
+              <div className="mb-1 text-xs uppercase tracking-wide text-muted">Registros recientes</div>
               <ul className="space-y-1 font-mono text-xs text-chalk-dim">
                 {logs.map((l) => (
                   <li key={l.id}>
@@ -149,13 +149,13 @@ export function ProgramView() {
     load()
   }, [programId])
 
-  if (loading) return <p className="mx-auto max-w-4xl px-4 py-8 font-mono text-sm text-muted">Loading…</p>
+  if (loading) return <p className="mx-auto max-w-4xl px-4 py-8 font-mono text-sm text-muted">Cargando…</p>
   if (error) return <p className="mx-auto max-w-4xl px-4 py-8 text-danger">{error}</p>
   if (!program) return null
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link to="/" className="mb-4 inline-block text-sm text-muted hover:text-chalk">← My programs</Link>
+      <Link to="/" className="mb-4 inline-block text-sm text-muted hover:text-chalk">← Mis programas</Link>
       <h1 className="font-display text-3xl font-bold tracking-wide">{program.name}</h1>
       {program.description && <p className="mt-1 text-chalk-dim">{program.description}</p>}
 
@@ -169,13 +169,13 @@ export function ProgramView() {
                 <ExerciseLogger key={ex.id} exercise={ex} userId={user.id} />
               ))}
               {workout.exercises.length === 0 && (
-                <p className="text-sm text-muted">No exercises added to this day yet.</p>
+                <p className="text-sm text-muted">Todavía no se agregaron ejercicios a este día.</p>
               )}
             </div>
           </div>
         ))}
         {workouts.length === 0 && (
-          <p className="text-muted">This program doesn't have any workout days yet.</p>
+          <p className="text-muted">Este programa todavía no tiene días de entrenamiento.</p>
         )}
       </div>
     </div>

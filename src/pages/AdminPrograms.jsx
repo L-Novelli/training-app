@@ -26,7 +26,7 @@ export function AdminPrograms()  {
       setPrograms(data || [])
     } catch (err) {
       console.error('Fetch programs error:', err)
-      setError(err.message || 'Failed to load programs.')
+      setError(err.message || 'No se pudieron cargar los programas.')
     } finally {
       setFetching(false)
     }
@@ -37,7 +37,7 @@ export function AdminPrograms()  {
     setError('')
 
     if (!name.trim()) {
-      setError('Program name cannot be empty.')
+      setError('El nombre del programa no puede estar vacío.')
       return
     }
 
@@ -56,7 +56,7 @@ export function AdminPrograms()  {
       await fetchPrograms()
     } catch (err) {
       console.error('Create program error:', err)
-      setError(err.message || 'Failed to create program. Check console for details.')
+      setError(err.message || 'No se pudo crear el programa. Revisá la consola para más detalles.')
     } finally {
       setLoading(false)
     }
@@ -64,7 +64,7 @@ export function AdminPrograms()  {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Programs</h1>
+      <h1 className="text-2xl font-bold mb-4">Programas</h1>
 
       {error && (
         <div className="bg-red-900/40 border border-red-600 text-red-200 px-4 py-2 rounded mb-4">
@@ -77,7 +77,7 @@ export function AdminPrograms()  {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="New program name, e.g. 12-Week Strength Block"
+          placeholder="Nombre del nuevo programa, ej. Bloque de Fuerza 12 Semanas"
           className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-gray-100"
         />
         <button
@@ -85,15 +85,15 @@ export function AdminPrograms()  {
           disabled={loading}
           className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded"
         >
-          {loading ? 'Creating...' : 'Create program'}
+          {loading ? 'Creando...' : 'Crear programa'}
         </button>
       </form>
 
       {fetching ? (
-        <p className="text-gray-400">Loading programs...</p>
+        <p className="text-gray-400">Cargando programas...</p>
       ) : programs.length === 0 ? (
         <div className="border border-dashed border-gray-700 rounded p-8 text-center text-gray-500">
-          No programs yet. Create one above to start building a training plan.
+          Todavía no hay programas. Creá uno arriba para empezar a armar un plan de entrenamiento.
         </div>
       ) : (
         <ul className="space-y-2">
@@ -107,7 +107,7 @@ export function AdminPrograms()  {
                 to={`/admin/programs/${p.id}`}
                 className="text-indigo-400 hover:text-indigo-300 text-sm"
               >
-                Edit →
+                Editar →
               </Link>
             </li>
           ))}

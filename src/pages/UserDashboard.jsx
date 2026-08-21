@@ -23,13 +23,13 @@ export function UserDashboard() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-6 font-display text-3xl font-bold tracking-wide">My Programs</h1>
+      <h1 className="mb-6 font-display text-3xl font-bold tracking-wide">Mis Programas</h1>
 
       {loading ? (
-        <p className="font-mono text-sm text-muted">Loading…</p>
+        <p className="font-mono text-sm text-muted">Cargando…</p>
       ) : programs.length === 0 ? (
         <div className="rounded-lg border border-dashed border-line p-8 text-center text-muted">
-          No programs assigned yet. Once your coach assigns one, it'll show up here.
+          Todavía no tenés programas asignados. Cuando tu entrenador te asigne uno, va a aparecer acá.
         </div>
       ) : (
         <ul className="space-y-2">
@@ -42,7 +42,7 @@ export function UserDashboard() {
                 <div className="font-semibold text-chalk">{p.name}</div>
                 {p.description && <div className="mt-0.5 text-sm text-chalk-dim">{p.description}</div>}
                 <div className="mt-1 font-mono text-xs text-muted">
-                  {p.workouts?.[0]?.count ?? 0} workout days · started {start_date}
+                  {p.workouts?.[0]?.count ?? 0} días de entrenamiento · iniciado el {start_date}
                 </div>
               </Link>
             </li>

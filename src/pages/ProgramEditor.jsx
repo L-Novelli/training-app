@@ -63,7 +63,7 @@ export function ProgramEditor() {
   const addWorkout = async () => {
     const { data, error } = await supabase
       .from('workouts')
-      .insert({ program_id: programId, name: `Day ${workouts.length + 1}`, day_order: workouts.length })
+      .insert({ program_id: programId, name: `Día ${workouts.length + 1}`, day_order: workouts.length })
       .select('*, exercises(*)')
       .single()
     if (error) setError(error.message)
@@ -78,7 +78,7 @@ export function ProgramEditor() {
   }
 
   const deleteWorkout = async (workoutId) => {
-    if (!confirm('Delete this workout day and all its exercises?')) return
+    if (!confirm('¿Eliminar este día de entrenamiento y todos sus ejercicios?')) return
     const { error } = await supabase.from('workouts').delete().eq('id', workoutId)
     if (error) setError(error.message)
     else setWorkouts((w) => w.filter((wk) => wk.id !== workoutId))
@@ -88,7 +88,7 @@ export function ProgramEditor() {
     const workout = workouts.find((w) => w.id === workoutId)
     const { data, error } = await supabase
       .from('exercises')
-      .insert({ workout_id: workoutId, order_index: workout.exercises.length, ...emptyExercise, name: 'New exercise' })
+      .insert({ workout_id: workoutId, order_index: workout.exercises.length, ...emptyExercise, name: 'Ejercicio nuevo' })
       .select()
       .single()
     if (error) { setError(error.message); return }
@@ -130,12 +130,12 @@ export function ProgramEditor() {
     }
   }
 
-  if (loading) return <p className="mx-auto max-w-4xl px-4 py-8 font-mono text-sm text-muted">Loading…</p>
-  if (!program) return <p className="mx-auto max-w-4xl px-4 py-8 text-danger">Program not found.</p>
+  if (loading) return <p className="mx-auto max-w-4xl px-4 py-8 font-mono text-sm text-muted">Cargando…</p>
+  if (!program) return <p className="mx-auto max-w-4xl px-4 py-8 text-danger">Programa no encontrado.</p>
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link to="/" className="mb-4 inline-block text-sm text-muted hover:text-chalk">← All programs</Link>
+      <Link to="/" className="mb-4 inline-block text-sm text-muted hover:text-chalk">← Todos los programas</Link>
 
       <input
         value={program.name}
@@ -145,7 +145,7 @@ export function ProgramEditor() {
       />
       <textarea
         value={program.description || ''}
-        placeholder="Add a description for this program…"
+        placeholder="Agregá una descripción para este programa…"
         onChange={(e) => updateProgramField('description', e.target.value)}
         onBlur={(e) => saveProgramField('description', e.target.value)}
         rows={2}
@@ -159,13 +159,13 @@ export function ProgramEditor() {
           onClick={() => setTab('build')}
           className={`px-4 py-2 text-sm font-medium ${tab === 'build' ? 'border-b-2 border-cobalt text-chalk' : 'text-muted'}`}
         >
-          Build workouts
+          Armar entrenamientos
         </button>
         <button
           onClick={() => setTab('assign')}
           className={`px-4 py-2 text-sm font-medium ${tab === 'assign' ? 'border-b-2 border-cobalt text-chalk' : 'text-muted'}`}
         >
-          Assign athletes
+          Asignar atletas
         </button>
       </div>
 
@@ -184,7 +184,7 @@ export function ProgramEditor() {
                   onClick={() => deleteWorkout(workout.id)}
                   className="text-xs text-muted hover:text-danger"
                 >
-                  Delete day
+                  Eliminar día
                 </button>
               </div>
 
@@ -195,7 +195,7 @@ export function ProgramEditor() {
                       value={ex.name}
                       onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
                       onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
-                      placeholder="Exercise name"
+                      placeholder="Nombre del ejercicio"
                       className="col-span-4 bg-transparent text-sm text-chalk outline-none"
                     />
                     <input
@@ -203,7 +203,7 @@ export function ProgramEditor() {
                       value={ex.sets ?? ''}
                       onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'sets', e.target.value)}
                       onBlur={(e) => saveExerciseField(ex.id, 'sets', Number(e.target.value) || null)}
-                      placeholder="Sets"
+                      placeholder="Series"
                       className="col-span-1 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
                     />
                     <input
@@ -217,7 +217,7 @@ export function ProgramEditor() {
                       value={ex.target_weight ?? ''}
                       onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'target_weight', e.target.value)}
                       onBlur={(e) => saveExerciseField(ex.id, 'target_weight', e.target.value)}
-                      placeholder="Weight"
+                      placeholder="Peso"
                       className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
                     />
                     <input
@@ -225,7 +225,7 @@ export function ProgramEditor() {
                       value={ex.rest_seconds ?? ''}
                       onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'rest_seconds', e.target.value)}
                       onBlur={(e) => saveExerciseField(ex.id, 'rest_seconds', Number(e.target.value) || null)}
-                      placeholder="Rest (s)"
+                      placeholder="Descanso (s)"
                       className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
                     />
                     <button
@@ -242,7 +242,7 @@ export function ProgramEditor() {
                 onClick={() => addExercise(workout.id)}
                 className="mt-3 text-sm text-cobalt hover:underline"
               >
-                + Add exercise
+                + Agregar ejercicio
               </button>
             </div>
           ))}
@@ -251,13 +251,13 @@ export function ProgramEditor() {
             onClick={addWorkout}
             className="w-full rounded-lg border border-dashed border-line py-3 text-sm text-muted hover:border-cobalt hover:text-chalk"
           >
-            + Add workout day
+            + Agregar día de entrenamiento
           </button>
         </div>
       ) : (
         <div className="space-y-2">
           {allUsers.length === 0 ? (
-            <p className="text-sm text-muted">No non-admin users have signed up yet.</p>
+            <p className="text-sm text-muted">Todavía no se registró ningún usuario que no sea administrador.</p>
           ) : (
             allUsers.map((u) => (
               <label
@@ -265,7 +265,7 @@ export function ProgramEditor() {
                 className="flex cursor-pointer items-center justify-between rounded-lg border border-line bg-panel px-4 py-3"
               >
                 <div>
-                  <div className="text-chalk">{u.full_name || '(no name set)'}</div>
+                  <div className="text-chalk">{u.full_name || '(sin nombre)'}</div>
                   <div className="font-mono text-xs text-muted">{u.email}</div>
                 </div>
                 <input
