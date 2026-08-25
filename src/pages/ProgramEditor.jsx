@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 const emptyExercise = { name: '', sets: 3, reps: '8-10', target_weight: '', rest_seconds: 60, notes: '' }
 
 export function ProgramEditor() {
   const { id: programId } = useParams()
+  const navigate = useNavigate()
   const [program, setProgram] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -130,12 +131,27 @@ export function ProgramEditor() {
     }
   }
 
+  const deleteProgram = async () => {
+    if (!confirm(`¿Eliminar el programa "${program.name}"? Esto también va a borrar todos sus días de entrenamiento, ejercicios y las asignaciones a usuarios. Esta acción no se puede deshacer.`)) return
+    const { error } = await supabase.from('programs').delete().eq('id', programId)
+    if (error) { setError(error.message); return }
+    navigate('/')
+  }
+
   if (loading) return <p className="mx-auto max-w-4xl px-4 py-8 font-mono text-sm text-muted">Cargando…</p>
   if (!program) return <p className="mx-auto max-w-4xl px-4 py-8 text-danger">Programa no encontrado.</p>
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link to="/" className="mb-4 inline-block text-sm text-muted hover:text-chalk">← Todos los programas</Link>
+      <div className="mb-4 flex items-center justify-between">
+        <Link to="/" className="inline-block text-sm text-muted hover:text-chalk">← Todos los programas</Link>
+        <button
+          onClick={deleteProgram}
+          className="text-sm text-muted hover:text-danger"
+        >
+          Eliminar programa
+        </button>
+      </div>
 
       <input
         value={program.name}

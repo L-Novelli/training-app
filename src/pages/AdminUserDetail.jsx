@@ -120,6 +120,19 @@ export function AdminUserDetail() {
     }
   }
 
+  async function handleDeleteProgram(programId, programName) {
+    if (!confirm(`¿Eliminar el programa "${programName}" por completo? Esto lo va a borrar para todos los usuarios que lo tengan asignado, junto con sus días y ejercicios. Esta acción no se puede deshacer.`)) return
+    setError('')
+    try {
+      const { error } = await supabase.from('programs').delete().eq('id', programId)
+      if (error) throw error
+      await load()
+    } catch (err) {
+      console.error('Delete program error:', err)
+      setError(err.message || 'No se pudo eliminar el programa.')
+    }
+  }
+
   if (loading) return <p className="mx-auto max-w-3xl px-4 py-8 font-mono text-sm text-muted">Cargando…</p>
   if (!user) return <p className="mx-auto max-w-3xl px-4 py-8 text-danger">Usuario no encontrado.</p>
 
@@ -182,6 +195,12 @@ export function AdminUserDetail() {
                     className="text-xs text-muted hover:text-danger"
                   >
                     Quitar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProgram(a.program_id, a.programs.name)}
+                    className="text-xs text-danger/70 hover:text-danger"
+                  >
+                    Eliminar programa
                   </button>
                 </div>
               </li>

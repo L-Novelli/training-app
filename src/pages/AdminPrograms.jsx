@@ -62,6 +62,20 @@ export function AdminPrograms()  {
     }
   }
 
+  async function handleDelete(program) {
+    if (!confirm(`¿Eliminar el programa "${program.name}"? Esto también va a borrar todos sus días de entrenamiento, ejercicios y las asignaciones a usuarios. Esta acción no se puede deshacer.`)) return
+
+    setError('')
+    try {
+      const { error } = await supabase.from('programs').delete().eq('id', program.id)
+      if (error) throw error
+      setPrograms((prev) => prev.filter((p) => p.id !== program.id))
+    } catch (err) {
+      console.error('Delete program error:', err)
+      setError(err.message || 'No se pudo eliminar el programa.')
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-4 font-display text-3xl font-bold tracking-wide text-chalk">Programas</h1>
@@ -103,12 +117,20 @@ export function AdminPrograms()  {
               className="flex items-center justify-between rounded border border-line bg-panel-raised px-4 py-3"
             >
               <span className="text-chalk">{p.name}</span>
-              <Link
-                to={`/admin/programs/${p.id}`}
-                className="text-sm text-cobalt hover:underline"
-              >
-                Editar →
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  to={`/admin/programs/${p.id}`}
+                  className="text-sm text-cobalt hover:underline"
+                >
+                  Editar →
+                </Link>
+                <button
+                  onClick={() => handleDelete(p)}
+                  className="text-xs text-muted hover:text-danger"
+                >
+                  Eliminar
+                </button>
+              </div>
             </li>
           ))}
         </ul>

@@ -53,10 +53,10 @@ function App() {
           />
 
           <Route
-            path="/admin/users"
+            path="/admin/users/:id"
             element={
               <ProtectedRoute adminOnly>
-                <Layout><AdminUsers /></Layout>
+                <Layout><AdminUserDetail /></Layout>
               </ProtectedRoute>
             }
           />
