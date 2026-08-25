@@ -17,6 +17,8 @@ create table if not exists profiles (
   id uuid references auth.users on delete cascade primary key,
   email text not null,
   full_name text,
+  phone text,
+  avatar_url text,
   role text not null default 'user' check (role in ('user', 'admin')),
   created_at timestamptz not null default now()
 );
@@ -142,22 +144,28 @@ alter table assignments enable row level security;
 alter table logs enable row level security;
 
 -- profiles ---------------------------------------------------------------
+drop policy if exists "profiles: read own" on profiles;
 create policy "profiles: read own" on profiles
   for select using (auth.uid() = id);
 
+drop policy if exists "profiles: admin reads all" on profiles;
 create policy "profiles: admin reads all" on profiles
   for select using (public.is_admin());
 
+drop policy if exists "profiles: user updates own name" on profiles;
 create policy "profiles: user updates own name" on profiles
   for update using (auth.uid() = id) with check (auth.uid() = id and role = (select role from profiles where id = auth.uid()));
 
+drop policy if exists "profiles: admin updates any" on profiles;
 create policy "profiles: admin updates any" on profiles
   for update using (public.is_admin());
 
 -- programs -----------------------------------------------------------------
+drop policy if exists "programs: admin full access" on programs;
 create policy "programs: admin full access" on programs
   for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "programs: assigned users can read" on programs;
 create policy "programs: assigned users can read" on programs
   for select using (
     exists (
@@ -167,9 +175,11 @@ create policy "programs: assigned users can read" on programs
   );
 
 -- workouts -----------------------------------------------------------------
+drop policy if exists "workouts: admin full access" on workouts;
 create policy "workouts: admin full access" on workouts
   for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "workouts: assigned users can read" on workouts;
 create policy "workouts: assigned users can read" on workouts
   for select using (
     exists (
@@ -179,9 +189,11 @@ create policy "workouts: assigned users can read" on workouts
   );
 
 -- exercises ------------------------------------------------------------------
+drop policy if exists "exercises: admin full access" on exercises;
 create policy "exercises: admin full access" on exercises
   for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "exercises: assigned users can read" on exercises;
 create policy "exercises: assigned users can read" on exercises
   for select using (
     exists (
@@ -192,18 +204,48 @@ create policy "exercises: assigned users can read" on exercises
   );
 
 -- assignments ----------------------------------------------------------------
+drop policy if exists "assignments: admin full access" on assignments;
 create policy "assignments: admin full access" on assignments
   for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "assignments: user reads own" on assignments;
 create policy "assignments: user reads own" on assignments
   for select using (auth.uid() = user_id);
 
 -- logs -------------------------------------------------------------------------
+drop policy if exists "logs: user full access to own" on logs;
 create policy "logs: user full access to own" on logs
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "logs: admin reads all" on logs;
 create policy "logs: admin reads all" on logs
   for select using (public.is_admin());
+
+-- =========================================================================
+-- STORAGE — bucket + policies for profile avatars.
+-- Files are stored as "<user_id>/avatar.<ext>", so each user can only
+-- write to their own folder (checked against auth.uid()), while anyone
+-- can read (bucket is public, since avatars are shown in the app UI).
+-- =========================================================================
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "avatars: anyone can view" on storage.objects;
+create policy "avatars: anyone can view" on storage.objects for select
+  using (bucket_id = 'avatars');
+
+drop policy if exists "avatars: users upload own" on storage.objects;
+create policy "avatars: users upload own" on storage.objects for insert
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatars: users update own" on storage.objects;
+create policy "avatars: users update own" on storage.objects for update
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatars: users delete own" on storage.objects;
+create policy "avatars: users delete own" on storage.objects for delete
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- =========================================================================
 -- AFTER RUNNING THIS FILE:
@@ -216,4 +258,14 @@ create policy "logs: admin reads all" on logs
 -- 3. In Authentication > Providers, Email is enabled by default. If you
 --    don't want a public "confirm your email" step while testing, you can
 --    turn off "Confirm email" under Authentication > Providers > Email.
+--
+-- IF YOU ALREADY RAN AN OLDER VERSION OF THIS SCHEMA (before the "phone"
+-- and "avatar_url" columns / avatars bucket existed), just run the whole
+-- file again — every statement above uses "if not exists" / "on conflict
+-- do nothing" / drops-and-recreates policies, so nothing will error out.
+-- The two new columns on profiles get picked up automatically because
+-- "create table if not exists" is skipped but the columns are added by
+-- this explicit statement, kept here for that exact case:
+alter table profiles add column if not exists phone text;
+alter table profiles add column if not exists avatar_url text;
 -- =========================================================================

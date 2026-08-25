@@ -42,10 +42,23 @@ export function Navbar() {
         </span>
 
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-muted sm:inline">
-            {profile?.full_name || profile?.email}
-            {isAdmin && <span className="ml-2 rounded bg-brass/20 px-1.5 py-0.5 text-xs font-semibold text-brass">ADMIN</span>}
-          </span>
+          <NavLink to="/perfil" className="flex items-center gap-2">
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="Perfil"
+                className="h-8 w-8 rounded-full border border-line object-cover"
+              />
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-panel-raised text-xs font-semibold text-muted">
+                {(profile?.full_name || profile?.email || '?').charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="hidden text-sm text-muted hover:text-chalk sm:inline">
+              {profile?.full_name || profile?.email}
+              {isAdmin && <span className="ml-2 rounded bg-brass/20 px-1.5 py-0.5 text-xs font-semibold text-brass">ADMIN</span>}
+            </span>
+          </NavLink>
           <button
             onClick={handleSignOut}
             className="rounded border border-line px-3 py-1.5 text-sm text-chalk-dim hover:border-danger hover:text-danger transition-colors"

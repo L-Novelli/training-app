@@ -9,6 +9,7 @@ import { ProgramEditor } from './pages/ProgramEditor'
 import { AdminUsers } from './pages/AdminUsers'
 import { UserDashboard } from './pages/UserDashboard'
 import { ProgramView } from './pages/ProgramView'
+import { Profile } from './pages/Profile'
 
 function Home() {
   const { isAdmin } = useAuth()
@@ -64,6 +65,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout><ProgramView /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/perfil"
+            element={
+              <ProtectedRoute>
+                <Layout><Profile /></Layout>
               </ProtectedRoute>
             }
           />
