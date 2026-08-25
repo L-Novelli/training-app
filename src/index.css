@@ -1,22 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Tangerine:wght@400;700&family=Cormorant+Garamond:ital,wght@1,500;1,600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #14161b;
-  --color-panel: #1c1f26;
-  --color-panel-raised: #242833;
-  --color-line: #2e3340;
-  --color-chalk: #f0ede4;
-  --color-chalk-dim: #a8acb8;
-  --color-muted: #8a8f9c;
-  --color-cobalt: #3d5afe;
-  --color-cobalt-dim: #24336b;
-  --color-brass: #d99a3d;
+  --color-ink: #000000;
+  --color-panel: #0a0a0a;
+  --color-panel-raised: #121212;
+  --color-line: #1f2937;
+  --color-chalk: #ffffff;
+  --color-chalk-dim: #d6d6d6;
+  --color-muted: #9ca3af;
+  --color-cobalt: #00a7e1;
+  --color-cobalt-dim: #003c52;
+  --color-brass: #ffbf00;
   --color-danger: #e5533d;
 
   --font-display: 'Big Shoulders Display', sans-serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+  --font-colonial: 'Cormorant Garamond', 'Tangerine', serif;
 }
 
 html, body, #root {

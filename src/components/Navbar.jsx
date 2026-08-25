@@ -17,10 +17,10 @@ export function Navbar() {
 
   return (
     <header className="border-b border-line bg-panel">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+      <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-6">
           <span className="font-display text-2xl font-bold tracking-wide text-chalk">
-            T&P
+            IRONLOG
           </span>
           <nav className="flex gap-1">
             {isAdmin ? (
@@ -33,6 +33,14 @@ export function Navbar() {
             )}
           </nav>
         </div>
+
+        <span
+          className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-xl italic text-brass md:block"
+          style={{ fontFamily: "'Tangerine', 'Cormorant Garamond', serif", fontSize: '2rem', fontWeight: 700 }}
+        >
+          ... O juremos con gloria morir
+        </span>
+
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-muted sm:inline">
             {profile?.full_name || profile?.email}

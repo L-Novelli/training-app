@@ -63,36 +63,36 @@ export function AdminPrograms()  {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Programas</h1>
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <h1 className="mb-4 font-display text-3xl font-bold tracking-wide text-chalk">Programas</h1>
 
       {error && (
-        <div className="bg-red-900/40 border border-red-600 text-red-200 px-4 py-2 rounded mb-4">
+        <div className="mb-4 rounded border border-danger bg-danger/10 px-4 py-2 text-danger">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleCreate} className="flex gap-2 mb-6">
+      <form onSubmit={handleCreate} className="mb-6 flex gap-2">
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre del nuevo programa, ej. Bloque de Fuerza 12 Semanas"
-          className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-gray-100"
+          className="flex-1 rounded border border-line bg-panel-raised px-3 py-2 text-chalk outline-none focus:border-cobalt"
         />
         <button
           type="submit"
           disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded"
+          className="rounded bg-cobalt px-4 py-2 font-semibold text-white hover:opacity-90 disabled:opacity-50"
         >
           {loading ? 'Creando...' : 'Crear programa'}
         </button>
       </form>
 
       {fetching ? (
-        <p className="text-gray-400">Cargando programas...</p>
+        <p className="font-mono text-sm text-muted">Cargando programas...</p>
       ) : programs.length === 0 ? (
-        <div className="border border-dashed border-gray-700 rounded p-8 text-center text-gray-500">
+        <div className="rounded-lg border border-dashed border-line p-8 text-center text-muted">
           Todavía no hay programas. Creá uno arriba para empezar a armar un plan de entrenamiento.
         </div>
       ) : (
@@ -100,12 +100,12 @@ export function AdminPrograms()  {
           {programs.map((p) => (
             <li
               key={p.id}
-              className="bg-gray-800 border border-gray-700 rounded px-4 py-3 flex justify-between items-center"
+              className="flex items-center justify-between rounded border border-line bg-panel-raised px-4 py-3"
             >
-              <span>{p.name}</span>
+              <span className="text-chalk">{p.name}</span>
               <Link
                 to={`/admin/programs/${p.id}`}
-                className="text-indigo-400 hover:text-indigo-300 text-sm"
+                className="text-sm text-cobalt hover:underline"
               >
                 Editar →
               </Link>
