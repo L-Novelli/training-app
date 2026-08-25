@@ -7,6 +7,7 @@ import { Signup } from './pages/Signup'
 import { AdminPrograms } from './pages/AdminPrograms'
 import { ProgramEditor } from './pages/ProgramEditor'
 import { AdminUsers } from './pages/AdminUsers'
+import { AdminUserDetail } from './pages/AdminUserDetail'
 import { UserDashboard } from './pages/UserDashboard'
 import { ProgramView } from './pages/ProgramView'
 import { Profile } from './pages/Profile'
@@ -56,6 +57,15 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <Layout><AdminUsers /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users/:id"
+            element={
+              <ProtectedRoute adminOnly>
+                <Layout><AdminUserDetail /></Layout>
               </ProtectedRoute>
             }
           />

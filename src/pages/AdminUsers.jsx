@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 export function AdminUsers() {
@@ -10,7 +11,7 @@ export function AdminUsers() {
     setLoading(true)
     const { data, error } = await supabase
       .from('profiles')
-      .select('*, assignments!assignments_user_id_fkey(count)')
+      .select('*, assignments(count)')
       .order('created_at', { ascending: false })
     if (error) setError(error.message)
     else setUsers(data)
@@ -40,7 +41,7 @@ export function AdminUsers() {
         <ul className="space-y-2">
           {users.map((u) => (
             <li key={u.id} className="flex items-center justify-between rounded-lg border border-line bg-panel px-4 py-3">
-              <div>
+              <Link to={`/admin/users/${u.id}`} className="flex-1 hover:opacity-80">
                 <div className="text-chalk">
                   {u.full_name || '(sin nombre)'}
                   {u.role === 'admin' && (
@@ -50,7 +51,7 @@ export function AdminUsers() {
                 <div className="font-mono text-xs text-muted">
                   {u.email} · {u.assignments?.[0]?.count ?? 0} programas asignados
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={() => toggleRole(u)}
                 className="rounded border border-line px-3 py-1.5 text-sm text-chalk-dim hover:border-cobalt hover:text-chalk"
