@@ -38,7 +38,7 @@ export function Navbar() {
           className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-xl italic text-brass md:block"
           style={{ fontFamily: "'Tangerine', 'Cormorant Garamond', serif", fontSize: '2rem', fontWeight: 700 }}
         >
-          ... O juremos con gloria morir
+          ... O Juremos con Gloria Morir
         </span>
 
         <div className="flex items-center gap-3">
