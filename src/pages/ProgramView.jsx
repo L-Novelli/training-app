@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 
-function ExerciseLogger({ exercise, userId }) {
+function ExerciseLogger({ exercise, userId, done, onToggle, busy }) {
   const [open, setOpen] = useState(false)
   const [logs, setLogs] = useState([])
   const [setsCompleted, setSetsCompleted] = useState(exercise.sets || '')
@@ -47,19 +47,33 @@ function ExerciseLogger({ exercise, userId }) {
   }
 
   return (
-    <div className="rounded border border-line bg-panel-raised p-3">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
-        <div>
-          <div className="font-medium text-chalk">{exercise.name}</div>
-          <div className="font-mono text-xs text-muted">
-            {exercise.sets} series × {exercise.reps} {exercise.target_weight && `@ ${exercise.target_weight}`}
-            {exercise.rest_seconds ? ` · descanso ${exercise.rest_seconds}s` : ''}
-          </div>
-        </div>
-        <span className="text-muted">{open ? '−' : '+'}</span>
+    <div className={`flex items-start gap-3 rounded border px-3 py-3 transition-colors ${
+      done ? 'border-cobalt/40 bg-cobalt/5' : 'border-line bg-panel-raised'
+    }`}>
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggle(exercise.id, done) }}
+        disabled={busy}
+        aria-label={done ? 'Marcar como no hecho' : 'Marcar como hecho'}
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 text-sm font-bold transition-colors disabled:opacity-50 ${
+          done ? 'border-cobalt bg-cobalt text-white' : 'border-line text-transparent hover:border-cobalt'
+        }`}
+      >
+        ✓
       </button>
 
-      {open && (
+      <div className="flex-1">
+        <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+          <div>
+            <div className={`font-medium text-chalk ${done ? 'line-through opacity-60' : ''}`}>{exercise.name}</div>
+            <div className="font-mono text-xs text-muted">
+              {exercise.sets} series × {exercise.reps} {exercise.target_weight && `@ ${exercise.target_weight}`}
+              {exercise.rest_seconds ? ` · descanso ${exercise.rest_seconds}s` : ''}
+            </div>
+          </div>
+          <span className="text-muted">{open ? '−' : '+'}</span>
+        </button>
+
+        {open && (
         <div className="mt-3 border-t border-line pt-3">
           {exercise.notes && <p className="mb-3 text-sm text-chalk-dim">{exercise.notes}</p>}
 
@@ -112,7 +126,8 @@ function ExerciseLogger({ exercise, userId }) {
             </div>
           )}
         </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -122,6 +137,8 @@ export function ProgramView() {
   const { user } = useAuth()
   const [program, setProgram] = useState(null)
   const [workouts, setWorkouts] = useState([])
+  const [completedIds, setCompletedIds] = useState(new Set())
+  const [busyExerciseId, setBusyExerciseId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -137,17 +154,58 @@ export function ProgramView() {
       ])
       if (progErr) setError(progErr.message)
       else setProgram(prog)
+
+      let sortedWorkouts = []
       if (wErr) setError(wErr.message)
       else {
-        setWorkouts((w || []).map((wk) => ({
+        sortedWorkouts = (w || []).map((wk) => ({
           ...wk,
           exercises: (wk.exercises || []).sort((a, b) => a.order_index - b.order_index),
-        })))
+        }))
+        setWorkouts(sortedWorkouts)
       }
+
+      const allExerciseIds = sortedWorkouts.flatMap((wk) => wk.exercises.map((e) => e.id))
+      if (allExerciseIds.length > 0) {
+        const { data: compData } = await supabase
+          .from('exercise_completions')
+          .select('exercise_id')
+          .eq('user_id', user.id)
+          .in('exercise_id', allExerciseIds)
+        setCompletedIds(new Set((compData || []).map((c) => c.exercise_id)))
+      }
+
       setLoading(false)
     }
     load()
   }, [programId])
+
+  async function toggleExercise(exerciseId, done) {
+    setBusyExerciseId(exerciseId)
+    setCompletedIds((prev) => {
+      const next = new Set(prev)
+      if (done) next.delete(exerciseId)
+      else next.add(exerciseId)
+      return next
+    })
+    try {
+      if (done) {
+        await supabase.from('exercise_completions').delete().eq('user_id', user.id).eq('exercise_id', exerciseId)
+      } else {
+        await supabase.from('exercise_completions').upsert({ user_id: user.id, exercise_id: exerciseId }, { onConflict: 'user_id,exercise_id' })
+      }
+    } catch (err) {
+      console.error('Toggle exercise error:', err)
+      setCompletedIds((prev) => {
+        const next = new Set(prev)
+        if (done) next.add(exerciseId)
+        else next.delete(exerciseId)
+        return next
+      })
+    } finally {
+      setBusyExerciseId(null)
+    }
+  }
 
   if (loading) return <p className="mx-auto max-w-4xl px-4 py-8 font-mono text-sm text-muted">Cargando…</p>
   if (error) return <p className="mx-auto max-w-4xl px-4 py-8 text-danger">{error}</p>
@@ -155,7 +213,7 @@ export function ProgramView() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link to="/" className="mb-4 inline-block text-sm text-muted hover:text-chalk">← Mis programas</Link>
+      <Link to="/" className="mb-4 inline-block text-sm text-muted hover:text-chalk">← Volver</Link>
       <h1 className="font-display text-3xl font-bold tracking-wide">{program.name}</h1>
       {program.description && <p className="mt-1 text-chalk-dim">{program.description}</p>}
 
@@ -166,7 +224,14 @@ export function ProgramView() {
             {workout.notes && <p className="mb-2 text-sm text-chalk-dim">{workout.notes}</p>}
             <div className="space-y-2">
               {workout.exercises.map((ex) => (
-                <ExerciseLogger key={ex.id} exercise={ex} userId={user.id} />
+                <ExerciseLogger
+                  key={ex.id}
+                  exercise={ex}
+                  userId={user.id}
+                  done={completedIds.has(ex.id)}
+                  busy={busyExerciseId === ex.id}
+                  onToggle={toggleExercise}
+                />
               ))}
               {workout.exercises.length === 0 && (
                 <p className="text-sm text-muted">Todavía no se agregaron ejercicios a este día.</p>

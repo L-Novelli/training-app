@@ -1,21 +1,16 @@
 import { HashRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Navbar } from './components/Navbar'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
-import { AdminPrograms } from './pages/AdminPrograms'
+import { Home } from './pages/Home'
 import { ProgramEditor } from './pages/ProgramEditor'
 import { AdminUsers } from './pages/AdminUsers'
 import { AdminUserDetail } from './pages/AdminUserDetail'
 import { UserDashboard } from './pages/UserDashboard'
 import { ProgramView } from './pages/ProgramView'
 import { Profile } from './pages/Profile'
-
-function Home() {
-  const { isAdmin } = useAuth()
-  return isAdmin ? <AdminPrograms /> : <UserDashboard />
-}
 
 function Layout({ children }) {
   return (
@@ -66,6 +61,15 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <Layout><AdminUserDetail /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/mis-programas"
+            element={
+              <ProtectedRoute>
+                <Layout><UserDashboard /></Layout>
               </ProtectedRoute>
             }
           />

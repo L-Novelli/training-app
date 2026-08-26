@@ -89,6 +89,17 @@ create table if not exists logs (
   created_at timestamptz not null default now()
 );
 
+-- One row per (user, exercise) marks that exercise as "done" for that user.
+-- Used to compute whether a whole workout day is complete, so the homepage
+-- can automatically advance to the next day in sequence.
+create table if not exists exercise_completions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  exercise_id uuid not null references exercises(id) on delete cascade,
+  completed_at timestamptz not null default now(),
+  unique (user_id, exercise_id)
+);
+
 -- ---------------------------------------------------------------------
 -- Indexes for the joins/filters the app does most often
 -- ---------------------------------------------------------------------
@@ -98,6 +109,8 @@ create index if not exists idx_assignments_user on assignments(user_id);
 create index if not exists idx_assignments_program on assignments(program_id);
 create index if not exists idx_logs_user on logs(user_id);
 create index if not exists idx_logs_exercise on logs(exercise_id);
+create index if not exists idx_completions_user on exercise_completions(user_id);
+create index if not exists idx_completions_exercise on exercise_completions(exercise_id);
 
 -- ---------------------------------------------------------------------
 -- Signup trigger: auto-create a profile row whenever someone signs up
@@ -142,6 +155,7 @@ alter table workouts enable row level security;
 alter table exercises enable row level security;
 alter table assignments enable row level security;
 alter table logs enable row level security;
+alter table exercise_completions enable row level security;
 
 -- profiles ---------------------------------------------------------------
 drop policy if exists "profiles: read own" on profiles;
@@ -221,6 +235,15 @@ drop policy if exists "logs: admin reads all" on logs;
 create policy "logs: admin reads all" on logs
   for select using (public.is_admin());
 
+-- exercise_completions -----------------------------------------------------
+drop policy if exists "completions: user manages own" on exercise_completions;
+create policy "completions: user manages own" on exercise_completions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "completions: admin reads all" on exercise_completions;
+create policy "completions: admin reads all" on exercise_completions
+  for select using (public.is_admin());
+
 -- =========================================================================
 -- STORAGE — bucket + policies for profile avatars.
 -- Files are stored as "<user_id>/avatar.<ext>", so each user can only
@@ -259,13 +282,11 @@ create policy "avatars: users delete own" on storage.objects for delete
 --    don't want a public "confirm your email" step while testing, you can
 --    turn off "Confirm email" under Authentication > Providers > Email.
 --
--- IF YOU ALREADY RAN AN OLDER VERSION OF THIS SCHEMA (before the "phone"
--- and "avatar_url" columns / avatars bucket existed), just run the whole
--- file again — every statement above uses "if not exists" / "on conflict
--- do nothing" / drops-and-recreates policies, so nothing will error out.
--- The two new columns on profiles get picked up automatically because
--- "create table if not exists" is skipped but the columns are added by
--- this explicit statement, kept here for that exact case:
+-- IF YOU ALREADY RAN AN OLDER VERSION OF THIS SCHEMA (before "phone",
+-- "avatar_url", "exercise_completions" or the avatars bucket existed),
+-- just run the whole file again — every statement above uses
+-- "if not exists" / "on conflict do nothing" / drops-and-recreates
+-- policies, so nothing will error out.
 alter table profiles add column if not exists phone text;
 alter table profiles add column if not exists avatar_url text;
 -- =========================================================================
