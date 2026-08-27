@@ -25,6 +25,7 @@ export function ProgramEditor() {
         .from('workouts')
         .select('*, exercises(*)')
         .eq('program_id', programId)
+        .order('week_number', { ascending: true })
         .order('day_order', { ascending: true }),
     ])
     if (progErr) setError(progErr.message)
@@ -61,14 +62,37 @@ export function ProgramEditor() {
     if (error) setError(error.message)
   }
 
-  const addWorkout = async () => {
+  const addWorkout = async (weekNumber) => {
+    const dayCountInWeek = workouts.filter((w) => w.week_number === weekNumber).length
     const { data, error } = await supabase
       .from('workouts')
-      .insert({ program_id: programId, name: `Día ${workouts.length + 1}`, day_order: workouts.length })
+      .insert({ program_id: programId, name: `Día ${dayCountInWeek + 1}`, week_number: weekNumber, day_order: dayCountInWeek })
       .select('*, exercises(*)')
       .single()
     if (error) setError(error.message)
     else setWorkouts((w) => [...w, { ...data, exercises: [] }])
+  }
+
+  const addWeek = async () => {
+    const nextWeek = workouts.length === 0 ? 1 : Math.max(...workouts.map((w) => w.week_number)) + 1
+    const { data, error } = await supabase
+      .from('workouts')
+      .insert({ program_id: programId, name: 'Día 1', week_number: nextWeek, day_order: 0 })
+      .select('*, exercises(*)')
+      .single()
+    if (error) setError(error.message)
+    else setWorkouts((w) => [...w, { ...data, exercises: [] }])
+  }
+
+  const deleteWeek = async (weekNumber) => {
+    if (!confirm(`¿Eliminar la semana ${weekNumber} completa, con todos sus días y ejercicios?`)) return
+    const { error } = await supabase
+      .from('workouts')
+      .delete()
+      .eq('program_id', programId)
+      .eq('week_number', weekNumber)
+    if (error) setError(error.message)
+    else setWorkouts((w) => w.filter((wk) => wk.week_number !== weekNumber))
   }
 
   const updateWorkoutName = async (workoutId, name) => {
@@ -141,6 +165,8 @@ export function ProgramEditor() {
   if (loading) return <p className="mx-auto max-w-4xl px-4 py-8 font-mono text-sm text-muted">Cargando…</p>
   if (!program) return <p className="mx-auto max-w-4xl px-4 py-8 text-danger">Programa no encontrado.</p>
 
+  const weekNumbers = [...new Set(workouts.map((w) => w.week_number))].sort((a, b) => a - b)
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
@@ -186,88 +212,119 @@ export function ProgramEditor() {
       </div>
 
       {tab === 'build' ? (
-        <div className="space-y-6">
-          {workouts.map((workout) => (
-            <div key={workout.id} className="rounded-lg border border-line bg-panel p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <input
-                  value={workout.name}
-                  onChange={(e) => updateWorkoutName(workout.id, e.target.value)}
-                  onBlur={(e) => saveWorkoutName(workout.id, e.target.value)}
-                  className="bg-transparent font-display text-xl font-bold text-chalk outline-none"
-                />
-                <button
-                  onClick={() => deleteWorkout(workout.id)}
-                  className="text-xs text-muted hover:text-danger"
-                >
-                  Eliminar día
-                </button>
-              </div>
+        <div className="space-y-8">
+          {weekNumbers.length === 0 && (
+            <p className="text-sm text-muted">
+              Este programa todavía no tiene semanas. Agregá la primera para empezar a cargar días y ejercicios.
+            </p>
+          )}
+          {weekNumbers.map((weekNumber) => {
+            const days = workouts
+              .filter((w) => w.week_number === weekNumber)
+              .sort((a, b) => a.day_order - b.day_order)
+            return (
+              <div key={weekNumber} className="space-y-4">
+                <div className="flex items-center justify-between border-b border-line pb-2">
+                  <h2 className="font-display text-2xl font-bold tracking-wide text-chalk">Semana {weekNumber}</h2>
+                  <button
+                    onClick={() => deleteWeek(weekNumber)}
+                    className="text-xs text-muted hover:text-danger"
+                  >
+                    Eliminar semana
+                  </button>
+                </div>
 
-              <div className="space-y-2">
-                {workout.exercises.map((ex) => (
-                  <div key={ex.id} className="grid grid-cols-12 items-center gap-2 rounded border border-line bg-panel-raised p-2">
-                    <input
-                      value={ex.name}
-                      onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
-                      onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
-                      placeholder="Nombre del ejercicio"
-                      className="col-span-4 bg-transparent text-sm text-chalk outline-none"
-                    />
-                    <input
-                      type="number"
-                      value={ex.sets ?? ''}
-                      onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'sets', e.target.value)}
-                      onBlur={(e) => saveExerciseField(ex.id, 'sets', Number(e.target.value) || null)}
-                      placeholder="Series"
-                      className="col-span-1 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                    />
-                    <input
-                      value={ex.reps ?? ''}
-                      onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'reps', e.target.value)}
-                      onBlur={(e) => saveExerciseField(ex.id, 'reps', e.target.value)}
-                      placeholder="Reps"
-                      className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                    />
-                    <input
-                      value={ex.target_weight ?? ''}
-                      onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'target_weight', e.target.value)}
-                      onBlur={(e) => saveExerciseField(ex.id, 'target_weight', e.target.value)}
-                      placeholder="Peso"
-                      className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                    />
-                    <input
-                      type="number"
-                      value={ex.rest_seconds ?? ''}
-                      onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'rest_seconds', e.target.value)}
-                      onBlur={(e) => saveExerciseField(ex.id, 'rest_seconds', Number(e.target.value) || null)}
-                      placeholder="Descanso (s)"
-                      className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                    />
+                {days.map((workout) => (
+                  <div key={workout.id} className="rounded-lg border border-line bg-panel p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <input
+                        value={workout.name}
+                        onChange={(e) => updateWorkoutName(workout.id, e.target.value)}
+                        onBlur={(e) => saveWorkoutName(workout.id, e.target.value)}
+                        className="bg-transparent font-display text-xl font-bold text-chalk outline-none"
+                      />
+                      <button
+                        onClick={() => deleteWorkout(workout.id)}
+                        className="text-xs text-muted hover:text-danger"
+                      >
+                        Eliminar día
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {workout.exercises.map((ex) => (
+                        <div key={ex.id} className="grid grid-cols-12 items-center gap-2 rounded border border-line bg-panel-raised p-2">
+                          <input
+                            value={ex.name}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
+                            placeholder="Nombre del ejercicio"
+                            className="col-span-4 bg-transparent text-sm text-chalk outline-none"
+                          />
+                          <input
+                            type="number"
+                            value={ex.sets ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'sets', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'sets', Number(e.target.value) || null)}
+                            placeholder="Series"
+                            className="col-span-1 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <input
+                            value={ex.reps ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'reps', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'reps', e.target.value)}
+                            placeholder="Reps"
+                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <input
+                            value={ex.target_weight ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'target_weight', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'target_weight', e.target.value)}
+                            placeholder="Peso"
+                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <input
+                            type="number"
+                            value={ex.rest_seconds ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'rest_seconds', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'rest_seconds', Number(e.target.value) || null)}
+                            placeholder="Descanso (s)"
+                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <button
+                            onClick={() => deleteExercise(workout.id, ex.id)}
+                            className="col-span-1 text-right text-xs text-muted hover:text-danger"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
                     <button
-                      onClick={() => deleteExercise(workout.id, ex.id)}
-                      className="col-span-1 text-right text-xs text-muted hover:text-danger"
+                      onClick={() => addExercise(workout.id)}
+                      className="mt-3 text-sm text-cobalt hover:underline"
                     >
-                      ✕
+                      + Agregar ejercicio
                     </button>
                   </div>
                 ))}
-              </div>
 
-              <button
-                onClick={() => addExercise(workout.id)}
-                className="mt-3 text-sm text-cobalt hover:underline"
-              >
-                + Agregar ejercicio
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() => addWorkout(weekNumber)}
+                  className="w-full rounded-lg border border-dashed border-line py-2 text-sm text-muted hover:border-cobalt hover:text-chalk"
+                >
+                  + Agregar día a la semana {weekNumber}
+                </button>
+              </div>
+            )
+          })}
 
           <button
-            onClick={addWorkout}
-            className="w-full rounded-lg border border-dashed border-line py-3 text-sm text-muted hover:border-cobalt hover:text-chalk"
+            onClick={addWeek}
+            className="w-full rounded-lg border border-dashed border-cobalt/60 py-3 text-sm font-medium text-cobalt hover:bg-cobalt/5"
           >
-            + Agregar día de entrenamiento
+            + Agregar semana
           </button>
         </div>
       ) : (
