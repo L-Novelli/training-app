@@ -41,6 +41,7 @@ create table if not exists workouts (
   id uuid primary key default gen_random_uuid(),
   program_id uuid not null references programs(id) on delete cascade,
   name text not null,
+  week_number int not null default 1,
   day_order int not null default 0,
   notes text
 );
@@ -101,6 +102,17 @@ create table if not exists exercise_completions (
 );
 
 -- ---------------------------------------------------------------------
+-- 7. PLAYLISTS  (Spotify playlists the admin wants to recommend)
+-- ---------------------------------------------------------------------
+create table if not exists playlists (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  spotify_url text not null,
+  created_by uuid references profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
 -- Indexes for the joins/filters the app does most often
 -- ---------------------------------------------------------------------
 create index if not exists idx_workouts_program on workouts(program_id);
@@ -156,6 +168,7 @@ alter table exercises enable row level security;
 alter table assignments enable row level security;
 alter table logs enable row level security;
 alter table exercise_completions enable row level security;
+alter table playlists enable row level security;
 
 -- profiles ---------------------------------------------------------------
 drop policy if exists "profiles: read own" on profiles;
@@ -244,6 +257,15 @@ drop policy if exists "completions: admin reads all" on exercise_completions;
 create policy "completions: admin reads all" on exercise_completions
   for select using (public.is_admin());
 
+-- playlists ------------------------------------------------------------------
+drop policy if exists "playlists: admin full access" on playlists;
+create policy "playlists: admin full access" on playlists
+  for all using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "playlists: authenticated users read" on playlists;
+create policy "playlists: authenticated users read" on playlists
+  for select using (auth.uid() is not null);
+
 -- =========================================================================
 -- STORAGE — bucket + policies for profile avatars.
 -- Files are stored as "<user_id>/avatar.<ext>", so each user can only
@@ -289,4 +311,5 @@ create policy "avatars: users delete own" on storage.objects for delete
 -- policies, so nothing will error out.
 alter table profiles add column if not exists phone text;
 alter table profiles add column if not exists avatar_url text;
+alter table workouts add column if not exists week_number int not null default 1;
 -- =========================================================================

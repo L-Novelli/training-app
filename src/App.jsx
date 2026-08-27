@@ -11,6 +11,7 @@ import { AdminUserDetail } from './pages/AdminUserDetail'
 import { UserDashboard } from './pages/UserDashboard'
 import { ProgramView } from './pages/ProgramView'
 import { Profile } from './pages/Profile'
+import { Playlists } from './pages/Playlists'
 
 function Layout({ children }) {
   return (
@@ -88,6 +89,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout><Profile /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/playlists"
+            element={
+              <ProtectedRoute>
+                <Layout><Playlists /></Layout>
               </ProtectedRoute>
             }
           />

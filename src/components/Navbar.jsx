@@ -35,7 +35,7 @@ export function Navbar() {
           </button>
 
           <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-xl font-bold tracking-wide text-chalk sm:text-2xl">
-            Raza Pura.
+            TORO Y PAMPA
           </span>
 
           {/* Espaciador para mantener el logo centrado (mismo ancho que el botón de la izquierda) */}
@@ -79,6 +79,7 @@ export function Navbar() {
             ) : (
               <NavLink to="/mis-programas" className={linkClass} onClick={closeDrawer}>Programas</NavLink>
             )}
+            <NavLink to="/playlists" className={linkClass} onClick={closeDrawer}>Playlists</NavLink>
             <NavLink to="/perfil" className={linkClass} onClick={closeDrawer}>Perfil</NavLink>
           </div>
 
