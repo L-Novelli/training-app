@@ -150,6 +150,7 @@ export function ProgramView() {
           .from('workouts')
           .select('*, exercises(*)')
           .eq('program_id', programId)
+          .order('week_number', { ascending: true })
           .order('day_order', { ascending: true }),
       ])
       if (progErr) setError(progErr.message)
@@ -217,28 +218,43 @@ export function ProgramView() {
       <h1 className="font-display text-3xl font-bold tracking-wide">{program.name}</h1>
       {program.description && <p className="mt-1 text-chalk-dim">{program.description}</p>}
 
-      <div className="mt-6 space-y-6">
-        {workouts.map((workout) => (
-          <div key={workout.id}>
-            <h2 className="mb-2 font-display text-xl font-bold text-chalk">{workout.name}</h2>
-            {workout.notes && <p className="mb-2 text-sm text-chalk-dim">{workout.notes}</p>}
-            <div className="space-y-2">
-              {workout.exercises.map((ex) => (
-                <ExerciseLogger
-                  key={ex.id}
-                  exercise={ex}
-                  userId={user.id}
-                  done={completedIds.has(ex.id)}
-                  busy={busyExerciseId === ex.id}
-                  onToggle={toggleExercise}
-                />
-              ))}
-              {workout.exercises.length === 0 && (
-                <p className="text-sm text-muted">Todavía no se agregaron ejercicios a este día.</p>
-              )}
-            </div>
-          </div>
-        ))}
+      <div className="mt-6 space-y-8">
+        {(() => {
+          const weekNumbers = [...new Set(workouts.map((w) => w.week_number))]
+          return weekNumbers.map((weekNumber) => {
+            const days = workouts.filter((w) => w.week_number === weekNumber)
+            return (
+              <div key={weekNumber} className="space-y-4">
+                {weekNumbers.length > 1 && (
+                  <h2 className="border-b border-line pb-2 font-display text-2xl font-bold tracking-wide text-chalk">
+                    Semana {weekNumber}
+                  </h2>
+                )}
+                {days.map((workout) => (
+                  <div key={workout.id}>
+                    <h3 className="mb-2 font-display text-xl font-bold text-chalk">{workout.name}</h3>
+                    {workout.notes && <p className="mb-2 text-sm text-chalk-dim">{workout.notes}</p>}
+                    <div className="space-y-2">
+                      {workout.exercises.map((ex) => (
+                        <ExerciseLogger
+                          key={ex.id}
+                          exercise={ex}
+                          userId={user.id}
+                          done={completedIds.has(ex.id)}
+                          busy={busyExerciseId === ex.id}
+                          onToggle={toggleExercise}
+                        />
+                      ))}
+                      {workout.exercises.length === 0 && (
+                        <p className="text-sm text-muted">Todavía no se agregaron ejercicios a este día.</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })
+        })()}
         {workouts.length === 0 && (
           <p className="text-muted">Este programa todavía no tiene días de entrenamiento.</p>
         )}
