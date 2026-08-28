@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { findCurrentDayIndex } from '../lib/progress'
+import { DayComment } from '../components/DayComment'
 
 export function TodayView({ programId }) {
   const { user } = useAuth()
@@ -195,6 +196,8 @@ export function TodayView({ programId }) {
               })}
             </ul>
           )}
+
+          <DayComment workoutId={currentWorkout.id} userId={user.id} />
         </>
       )}
 

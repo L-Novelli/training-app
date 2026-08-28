@@ -101,6 +101,19 @@ create table if not exists exercise_completions (
   unique (user_id, exercise_id)
 );
 
+-- One row per (user, workout) holds the athlete's end-of-day comment,
+-- answering "¿Cómo te sentiste haciendo los básicos?". Upserted so each
+-- athlete has a single, editable comment per training day.
+create table if not exists workout_comments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  workout_id uuid not null references workouts(id) on delete cascade,
+  comment text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, workout_id)
+);
+
 -- ---------------------------------------------------------------------
 -- 7. PLAYLISTS  (Spotify playlists the admin wants to recommend)
 -- ---------------------------------------------------------------------
@@ -123,6 +136,8 @@ create index if not exists idx_logs_user on logs(user_id);
 create index if not exists idx_logs_exercise on logs(exercise_id);
 create index if not exists idx_completions_user on exercise_completions(user_id);
 create index if not exists idx_completions_exercise on exercise_completions(exercise_id);
+create index if not exists idx_comments_user on workout_comments(user_id);
+create index if not exists idx_comments_workout on workout_comments(workout_id);
 
 -- ---------------------------------------------------------------------
 -- Signup trigger: auto-create a profile row whenever someone signs up
@@ -168,6 +183,7 @@ alter table exercises enable row level security;
 alter table assignments enable row level security;
 alter table logs enable row level security;
 alter table exercise_completions enable row level security;
+alter table workout_comments enable row level security;
 alter table playlists enable row level security;
 
 -- profiles ---------------------------------------------------------------
@@ -255,6 +271,15 @@ create policy "completions: user manages own" on exercise_completions
 
 drop policy if exists "completions: admin reads all" on exercise_completions;
 create policy "completions: admin reads all" on exercise_completions
+  for select using (public.is_admin());
+
+-- workout_comments -----------------------------------------------------------
+drop policy if exists "comments: user manages own" on workout_comments;
+create policy "comments: user manages own" on workout_comments
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "comments: admin reads all" on workout_comments;
+create policy "comments: admin reads all" on workout_comments
   for select using (public.is_admin());
 
 -- playlists ------------------------------------------------------------------

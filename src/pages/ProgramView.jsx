@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
+import { DayComment } from '../components/DayComment'
 
 function ExerciseLogger({ exercise, userId, done, onToggle, busy }) {
   const [open, setOpen] = useState(false)
@@ -249,6 +250,7 @@ export function ProgramView() {
                         <p className="text-sm text-muted">Todavía no se agregaron ejercicios a este día.</p>
                       )}
                     </div>
+                    <DayComment workoutId={workout.id} userId={user.id} />
                   </div>
                 ))}
               </div>
