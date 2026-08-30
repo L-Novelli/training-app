@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { DayComment } from '../components/DayComment'
+import { DIFFICULTY_OPTIONS } from '../lib/difficulty'
 
-function ExerciseLogger({ exercise, userId, done, onToggle, busy }) {
+function ExerciseLogger({ exercise, userId, done, onToggle, busy, difficulty, onSetDifficulty }) {
   const [open, setOpen] = useState(false)
   const [logs, setLogs] = useState([])
   const [setsCompleted, setSetsCompleted] = useState(exercise.sets || '')
@@ -74,6 +74,18 @@ function ExerciseLogger({ exercise, userId, done, onToggle, busy }) {
           <span className="text-muted">{open ? '−' : '+'}</span>
         </button>
 
+        <select
+          value={difficulty || ''}
+          onChange={(e) => { e.stopPropagation(); onSetDifficulty(exercise.id, e.target.value || null) }}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2 rounded border border-line bg-panel px-2 py-1 text-xs text-chalk-dim outline-none focus:border-cobalt"
+        >
+          <option value="">Dificultad de ejecución…</option>
+          {DIFFICULTY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+
         {open && (
         <div className="mt-3 border-t border-line pt-3">
           {exercise.notes && <p className="mb-3 text-sm text-chalk-dim">{exercise.notes}</p>}
@@ -139,6 +151,7 @@ export function ProgramView() {
   const [program, setProgram] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [completedIds, setCompletedIds] = useState(new Set())
+  const [difficultyMap, setDifficultyMap] = useState(new Map())
   const [busyExerciseId, setBusyExerciseId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -171,10 +184,11 @@ export function ProgramView() {
       if (allExerciseIds.length > 0) {
         const { data: compData } = await supabase
           .from('exercise_completions')
-          .select('exercise_id')
+          .select('exercise_id, difficulty')
           .eq('user_id', user.id)
           .in('exercise_id', allExerciseIds)
         setCompletedIds(new Set((compData || []).map((c) => c.exercise_id)))
+        setDifficultyMap(new Map((compData || []).map((c) => [c.exercise_id, c.difficulty])))
       }
 
       setLoading(false)
@@ -193,6 +207,11 @@ export function ProgramView() {
     try {
       if (done) {
         await supabase.from('exercise_completions').delete().eq('user_id', user.id).eq('exercise_id', exerciseId)
+        setDifficultyMap((prev) => {
+          const next = new Map(prev)
+          next.delete(exerciseId)
+          return next
+        })
       } else {
         await supabase.from('exercise_completions').upsert({ user_id: user.id, exercise_id: exerciseId }, { onConflict: 'user_id,exercise_id' })
       }
@@ -206,6 +225,21 @@ export function ProgramView() {
       })
     } finally {
       setBusyExerciseId(null)
+    }
+  }
+
+  async function setDifficulty(exerciseId, difficulty) {
+    const wasAlreadyDone = completedIds.has(exerciseId)
+    setDifficultyMap((prev) => new Map(prev).set(exerciseId, difficulty))
+    if (!wasAlreadyDone) {
+      setCompletedIds((prev) => new Set(prev).add(exerciseId))
+    }
+    try {
+      await supabase
+        .from('exercise_completions')
+        .upsert({ user_id: user.id, exercise_id: exerciseId, difficulty }, { onConflict: 'user_id,exercise_id' })
+    } catch (err) {
+      console.error('Set difficulty error:', err)
     }
   }
 
@@ -244,13 +278,14 @@ export function ProgramView() {
                           done={completedIds.has(ex.id)}
                           busy={busyExerciseId === ex.id}
                           onToggle={toggleExercise}
+                          difficulty={difficultyMap.get(ex.id)}
+                          onSetDifficulty={setDifficulty}
                         />
                       ))}
                       {workout.exercises.length === 0 && (
                         <p className="text-sm text-muted">Todavía no se agregaron ejercicios a este día.</p>
                       )}
                     </div>
-                    <DayComment workoutId={workout.id} userId={user.id} />
                   </div>
                 ))}
               </div>

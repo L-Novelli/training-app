@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { findCurrentDayIndex } from '../lib/progress'
-import { DayComment } from '../components/DayComment'
+import { DIFFICULTY_OPTIONS } from '../lib/difficulty'
 
 export function TodayView({ programId }) {
   const { user } = useAuth()
   const [program, setProgram] = useState(null)
   const [workouts, setWorkouts] = useState([])
   const [completedIds, setCompletedIds] = useState(new Set())
+  const [difficultyMap, setDifficultyMap] = useState(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyExerciseId, setBusyExerciseId] = useState(null)
@@ -25,6 +26,7 @@ export function TodayView({ programId }) {
           .from('workouts')
           .select('*, exercises(*)')
           .eq('program_id', programId)
+          .order('week_number', { ascending: true })
           .order('day_order', { ascending: true }),
       ])
       if (progErr) throw progErr
@@ -41,7 +43,7 @@ export function TodayView({ programId }) {
       if (allExerciseIds.length > 0) {
         const { data: compData, error: compErr } = await supabase
           .from('exercise_completions')
-          .select('exercise_id')
+          .select('exercise_id, difficulty')
           .eq('user_id', user.id)
           .in('exercise_id', allExerciseIds)
         if (compErr) throw compErr
@@ -51,6 +53,7 @@ export function TodayView({ programId }) {
       setProgram(programData)
       setWorkouts(sortedWorkouts)
       setCompletedIds(new Set(completions.map((c) => c.exercise_id)))
+      setDifficultyMap(new Map(completions.map((c) => [c.exercise_id, c.difficulty])))
     } catch (err) {
       console.error('Load today view error:', err)
       setError(err.message || 'No se pudo cargar tu rutina de hoy.')
@@ -78,6 +81,11 @@ export function TodayView({ programId }) {
           .eq('user_id', user.id)
           .eq('exercise_id', exerciseId)
         if (error) throw error
+        setDifficultyMap((prev) => {
+          const next = new Map(prev)
+          next.delete(exerciseId)
+          return next
+        })
       } else {
         const { error } = await supabase
           .from('exercise_completions')
@@ -95,6 +103,23 @@ export function TodayView({ programId }) {
       })
     } finally {
       setBusyExerciseId(null)
+    }
+  }
+
+  async function setDifficulty(exerciseId, difficulty) {
+    const wasAlreadyDone = completedIds.has(exerciseId)
+    setDifficultyMap((prev) => new Map(prev).set(exerciseId, difficulty))
+    if (!wasAlreadyDone) {
+      setCompletedIds((prev) => new Set(prev).add(exerciseId))
+    }
+    try {
+      const { error } = await supabase
+        .from('exercise_completions')
+        .upsert({ user_id: user.id, exercise_id: exerciseId, difficulty }, { onConflict: 'user_id,exercise_id' })
+      if (error) throw error
+    } catch (err) {
+      console.error('Set difficulty error:', err)
+      setError(err.message || 'No se pudo guardar la dificultad.')
     }
   }
 
@@ -156,8 +181,11 @@ export function TodayView({ programId }) {
       ) : (
         <>
           <h1 className="mb-4 font-display text-3xl font-bold tracking-wide text-chalk">
-            Día {currentIndex + 1} de {workouts.length} — {currentWorkout.name}
+            Semana {currentWorkout.week_number} · Día {currentWorkout.day_order + 1} — {currentWorkout.name}
           </h1>
+          <p className="mb-4 -mt-3 text-xs text-muted">
+            Progreso general: día {currentIndex + 1} de {workouts.length}
+          </p>
           {currentWorkout.notes && <p className="mb-4 text-sm text-chalk-dim">{currentWorkout.notes}</p>}
 
           {currentWorkout.exercises.length === 0 ? (
@@ -190,14 +218,22 @@ export function TodayView({ programId }) {
                         {ex.rest_seconds ? ` · descanso ${ex.rest_seconds}s` : ''}
                       </div>
                       {ex.notes && <div className="mt-1 text-sm text-chalk-dim">{ex.notes}</div>}
+                      <select
+                        value={difficultyMap.get(ex.id) || ''}
+                        onChange={(e) => setDifficulty(ex.id, e.target.value || null)}
+                        className="mt-2 rounded border border-line bg-panel px-2 py-1 text-xs text-chalk-dim outline-none focus:border-cobalt"
+                      >
+                        <option value="">Dificultad de ejecución…</option>
+                        {DIFFICULTY_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
                     </div>
                   </li>
                 )
               })}
             </ul>
           )}
-
-          <DayComment workoutId={currentWorkout.id} userId={user.id} />
         </>
       )}
 
