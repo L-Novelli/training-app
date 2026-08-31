@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Tangerine:wght@400;700&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=UnifrakturMaguntia&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Tangerine:wght@400;700&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Pirata+One&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -18,7 +18,7 @@
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
   --font-colonial: 'Cormorant Garamond', 'Tangerine', serif;
-  --font-navbar: 'UnifrakturMaguntia', 'Big Shoulders Display', serif;
+  --font-navbar: 'Pirata One', 'Big Shoulders Display', serif;
 }
 
 html, body, #root {
