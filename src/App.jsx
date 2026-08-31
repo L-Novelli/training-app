@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Navbar } from './components/Navbar'
+import { Footer } from './components/Footer'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Home } from './pages/Home'
@@ -15,9 +16,10 @@ import { Playlists } from './pages/Playlists'
 
 function Layout({ children }) {
   return (
-    <div className="min-h-screen bg-ink">
+    <div className="flex min-h-screen flex-col bg-ink">
       <Navbar />
-      {children}
+      <div className="flex-1">{children}</div>
+      <Footer />
     </div>
   )
 }
