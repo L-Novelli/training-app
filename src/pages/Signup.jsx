@@ -35,7 +35,7 @@ export function Signup() {
     <div className="flex min-h-screen items-center justify-center bg-ink px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="font-display text-4xl font-bold tracking-wide text-chalk">Comandos Pura.</div>
+          <div className="font-display text-4xl font-bold tracking-wide text-chalk">COMANDOS.</div>
           <p className="mt-1 text-sm text-muted">Creá tu cuenta</p>
         </div>
 
