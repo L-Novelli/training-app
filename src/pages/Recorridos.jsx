@@ -225,7 +225,7 @@ export function Recorridos() {
         await navigator.share({
           files: [file],
           title: 'Mi recorrido',
-          text: 'Mi recorrido con Toro y Pampa 🇦🇷',
+          text: 'Mi recorrido con COMANDOS 🇦🇷',
         })
       } else {
         const url = URL.createObjectURL(blob)

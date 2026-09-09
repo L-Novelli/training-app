@@ -21,12 +21,9 @@ export async function generateShareCardBlob(activity) {
   canvas.width = WIDTH
   canvas.height = HEIGHT
   const ctx = canvas.getContext('2d')
-
-  const bg = ctx.createLinearGradient(0, 0, 0, HEIGHT)
-  bg.addColorStop(0, '#000000')
-  bg.addColorStop(1, '#0a0a0a')
-  ctx.fillStyle = bg
-  ctx.fillRect(0, 0, WIDTH, HEIGHT)
+  // Sin relleno de fondo: el canvas queda transparente por defecto, así la
+  // imagen final se adapta al fondo que elija el usuario al compartirla
+  // (historia de Instagram, WhatsApp, etc.).
 
   try {
     await Promise.all([
