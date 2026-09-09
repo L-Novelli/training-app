@@ -7,6 +7,7 @@ export function Profile() {
 
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [phone, setPhone] = useState(profile?.phone || '')
+  const [weightKg, setWeightKg] = useState(profile?.weight_kg ?? '')
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [savingInfo, setSavingInfo] = useState(false)
@@ -77,7 +78,11 @@ export function Profile() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName.trim(), phone: phone.trim() || null })
+        .update({
+          full_name: fullName.trim(),
+          phone: phone.trim() || null,
+          weight_kg: weightKg === '' ? null : Number(weightKg),
+        })
         .eq('id', user.id)
 
       if (error) throw error
@@ -204,6 +209,19 @@ export function Profile() {
               placeholder="Ej. +54 9 11 1234-5678"
               className="w-full rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Peso (kg)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={weightKg}
+              onChange={(e) => setWeightKg(e.target.value)}
+              placeholder="Ej. 78"
+              className="w-full rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
+            />
+            <p className="mt-1 text-xs text-muted">Se usa para calcular las calorías quemadas en tus recorridos.</p>
           </div>
           <button
             type="submit"

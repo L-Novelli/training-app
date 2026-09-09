@@ -19,6 +19,7 @@ create table if not exists profiles (
   full_name text,
   phone text,
   avatar_url text,
+  weight_kg numeric,
   role text not null default 'user' check (role in ('user', 'admin')),
   created_at timestamptz not null default now()
 );
@@ -115,6 +116,23 @@ create table if not exists playlists (
 );
 
 -- ---------------------------------------------------------------------
+-- 8. GPS_ACTIVITIES  (recorridos guardados por GPS: cardio, caminatas, etc.)
+-- ---------------------------------------------------------------------
+create table if not exists gps_activities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  started_at timestamptz not null,
+  ended_at timestamptz not null,
+  duration_seconds int not null,
+  distance_meters numeric not null,
+  avg_speed_kmh numeric not null,
+  calories numeric,
+  load_kg numeric not null default 0,
+  path jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
 -- Indexes for the joins/filters the app does most often
 -- ---------------------------------------------------------------------
 create index if not exists idx_workouts_program on workouts(program_id);
@@ -125,6 +143,7 @@ create index if not exists idx_logs_user on logs(user_id);
 create index if not exists idx_logs_exercise on logs(exercise_id);
 create index if not exists idx_completions_user on exercise_completions(user_id);
 create index if not exists idx_completions_exercise on exercise_completions(exercise_id);
+create index if not exists idx_gps_activities_user on gps_activities(user_id);
 
 -- ---------------------------------------------------------------------
 -- Signup trigger: auto-create a profile row whenever someone signs up
@@ -171,6 +190,7 @@ alter table assignments enable row level security;
 alter table logs enable row level security;
 alter table exercise_completions enable row level security;
 alter table playlists enable row level security;
+alter table gps_activities enable row level security;
 
 -- profiles ---------------------------------------------------------------
 drop policy if exists "profiles: read own" on profiles;
@@ -268,6 +288,15 @@ drop policy if exists "playlists: authenticated users read" on playlists;
 create policy "playlists: authenticated users read" on playlists
   for select using (auth.uid() is not null);
 
+-- gps_activities ---------------------------------------------------------
+drop policy if exists "gps: user manages own" on gps_activities;
+create policy "gps: user manages own" on gps_activities
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "gps: admin reads all" on gps_activities;
+create policy "gps: admin reads all" on gps_activities
+  for select using (public.is_admin());
+
 -- =========================================================================
 -- STORAGE — bucket + policies for profile avatars.
 -- Files are stored as "<user_id>/avatar.<ext>", so each user can only
@@ -313,7 +342,9 @@ create policy "avatars: users delete own" on storage.objects for delete
 -- policies, so nothing will error out.
 alter table profiles add column if not exists phone text;
 alter table profiles add column if not exists avatar_url text;
+alter table profiles add column if not exists weight_kg numeric;
 alter table workouts add column if not exists week_number int not null default 1;
 alter table exercise_completions add column if not exists difficulty text
   check (difficulty in ('muy_facil', 'facil', 'moderado', 'pesado', 'muy_pesado'));
+alter table gps_activities add column if not exists load_kg numeric not null default 0;
 -- =========================================================================

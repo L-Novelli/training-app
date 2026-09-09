@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -13,6 +14,7 @@ import { UserDashboard } from './pages/UserDashboard'
 import { ProgramView } from './pages/ProgramView'
 import { Profile } from './pages/Profile'
 import { Playlists } from './pages/Playlists'
+const Recorridos = lazy(() => import('./pages/Recorridos').then((m) => ({ default: m.Recorridos })))
 
 function Layout({ children }) {
   return (
@@ -100,6 +102,19 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout><Playlists /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/recorridos"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Suspense fallback={<p className="mx-auto max-w-3xl px-4 py-8 font-mono text-sm text-muted">Cargando…</p>}>
+                    <Recorridos />
+                  </Suspense>
+                </Layout>
               </ProtectedRoute>
             }
           />
