@@ -127,22 +127,29 @@ export function Recorridos() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords
+        const { latitude, longitude, accuracy } = pos.coords
+
+        // Si el GPS reporta muy mala precisión (típico en interiores, entre
+        // edificios altos, o con mala señal), descartamos el punto entero:
+        // sumaría distancia falsa y ensuciaría el trazado en el mapa.
+        if (accuracy != null && accuracy > 25) return
+
         setPoints((prev) => {
           const newPoint = { lat: latitude, lng: longitude, t: pos.timestamp }
           if (prev.length > 0) {
             const last = prev[prev.length - 1]
             const d = haversineMeters(last.lat, last.lng, newPoint.lat, newPoint.lng)
-            // Ignoramos saltos chiquitos (ruido típico del GPS al estar parado)
-            // para no sumar distancia fantasma.
-            if (d > 2) distanceRef.current += d
+            // Filtro mínimo, solo para el ruido de GPS al estar parado (no
+            // para movimiento real): con el filtro de precisión de arriba
+            // ya alcanza, así que este umbral es chico a propósito.
+            if (d > 1) distanceRef.current += d
           }
           return [...prev, newPoint]
         })
         setLiveDistance(distanceRef.current)
       },
       (err) => setGeoError(mapGeoError(err)),
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 }
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 }
     )
 
     setTracking(true)
@@ -218,7 +225,7 @@ export function Recorridos() {
         await navigator.share({
           files: [file],
           title: 'Mi recorrido',
-          text: 'Mi recorrido con COMANDOS 🇦🇷',
+          text: 'Mi recorrido con Toro y Pampa 🇦🇷',
         })
       } else {
         const url = URL.createObjectURL(blob)
