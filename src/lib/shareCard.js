@@ -38,7 +38,7 @@ export async function generateShareCardBlob(activity) {
     // Si las fuentes no cargan a tiempo, seguimos con las del sistema.
   }
 
-  // Logo (Sol de Mayo + "Comandos.ar"), con el texto "TORO Y PAMPA" como
+  // Logo (Sol de Mayo + "Comandos.ar"), con el texto "COMANDOS" como
   // respaldo si por algún motivo la imagen no llega a cargar.
   let logoBottom = 130
   try {
@@ -53,7 +53,7 @@ export async function generateShareCardBlob(activity) {
     ctx.fillStyle = '#ffbf00'
     ctx.textAlign = 'center'
     ctx.font = "64px 'Pirata One', serif"
-    ctx.fillText('TORO Y PAMPA', WIDTH / 2, 130)
+    ctx.fillText('COMANDOS', WIDTH / 2, 130)
     logoBottom = 130
   }
 
