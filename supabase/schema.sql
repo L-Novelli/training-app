@@ -128,6 +128,8 @@ create table if not exists gps_activities (
   avg_speed_kmh numeric not null,
   calories numeric,
   load_kg numeric not null default 0,
+  activity_type text not null default 'caminar'
+    check (activity_type in ('caminar', 'correr', 'rucking', 'bicicleta')),
   path jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
@@ -347,4 +349,6 @@ alter table workouts add column if not exists week_number int not null default 1
 alter table exercise_completions add column if not exists difficulty text
   check (difficulty in ('muy_facil', 'facil', 'moderado', 'pesado', 'muy_pesado'));
 alter table gps_activities add column if not exists load_kg numeric not null default 0;
+alter table gps_activities add column if not exists activity_type text not null default 'caminar'
+  check (activity_type in ('caminar', 'correr', 'rucking', 'bicicleta'));
 -- =========================================================================

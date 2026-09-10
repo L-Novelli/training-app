@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { haversineMeters, estimateCalories, formatDuration } from '../lib/geo'
+import { ACTIVITY_TYPES, activityLabel } from '../lib/activity'
 import { RouteMap } from '../components/RouteMap'
 import { generateShareCardBlob } from '../lib/shareCard'
 
@@ -28,6 +29,7 @@ export function Recorridos() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [geoError, setGeoError] = useState('')
   const [loadKg, setLoadKg] = useState('')
+  const [activityType, setActivityType] = useState('caminar')
   const [sharingId, setSharingId] = useState(null)
   const [shareError, setShareError] = useState('')
 
@@ -38,6 +40,15 @@ export function Recorridos() {
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editDistanceKm, setEditDistanceKm] = useState('')
+  const [editMinutes, setEditMinutes] = useState('')
+  const [editSeconds, setEditSeconds] = useState('')
+  const [editLoadKg, setEditLoadKg] = useState('')
+  const [editActivityType, setEditActivityType] = useState('caminar')
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
 
   const watchIdRef = useRef(null)
   const intervalRef = useRef(null)
@@ -166,7 +177,7 @@ export function Recorridos() {
     const distanceMeters = distanceRef.current
     const avgSpeedKmh = (distanceMeters / 1000) / (durationSeconds / 3600)
     const loadKgNum = Number(loadKg) || 0
-    const calories = estimateCalories({ avgSpeedKmh, weightKg: profile?.weight_kg, durationSeconds, loadKg: loadKgNum })
+    const calories = estimateCalories({ avgSpeedKmh, weightKg: profile?.weight_kg, durationSeconds, loadKg: loadKgNum, activityType })
 
     setSummary({
       points,
@@ -175,6 +186,7 @@ export function Recorridos() {
       avgSpeedKmh,
       calories,
       loadKg: loadKgNum,
+      activityType,
       startedAt: new Date(startTimeRef.current),
       endedAt: new Date(),
     })
@@ -201,6 +213,7 @@ export function Recorridos() {
         avg_speed_kmh: summary.avgSpeedKmh,
         calories: summary.calories,
         load_kg: summary.loadKg || 0,
+        activity_type: summary.activityType || 'caminar',
         path: summary.points,
       })
       if (error) throw error
@@ -211,6 +224,75 @@ export function Recorridos() {
       setSaveError(err.message || 'No se pudo guardar el recorrido.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  function startEdit(h) {
+    setEditingId(h.id)
+    setEditDistanceKm((h.distance_meters / 1000).toFixed(2))
+    setEditMinutes(String(Math.floor(h.duration_seconds / 60)))
+    setEditSeconds(String(h.duration_seconds % 60))
+    setEditLoadKg(h.load_kg > 0 ? String(h.load_kg) : '')
+    setEditActivityType(h.activity_type || 'caminar')
+    setEditError('')
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditError('')
+  }
+
+  async function saveEdit(h) {
+    setEditSaving(true)
+    setEditError('')
+    try {
+      const newDistanceMeters = Math.max(0, Number(editDistanceKm) || 0) * 1000
+      const newDurationSeconds = Math.max(1, (Number(editMinutes) || 0) * 60 + (Number(editSeconds) || 0))
+      const newLoadKg = Number(editLoadKg) || 0
+      const newAvgSpeedKmh = (newDistanceMeters / 1000) / (newDurationSeconds / 3600)
+      const newCalories = estimateCalories({
+        avgSpeedKmh: newAvgSpeedKmh,
+        weightKg: profile?.weight_kg,
+        durationSeconds: newDurationSeconds,
+        loadKg: newLoadKg,
+        activityType: editActivityType,
+      })
+
+      const { error } = await supabase
+        .from('gps_activities')
+        .update({
+          distance_meters: newDistanceMeters,
+          duration_seconds: newDurationSeconds,
+          avg_speed_kmh: newAvgSpeedKmh,
+          load_kg: newLoadKg,
+          activity_type: editActivityType,
+          calories: newCalories,
+        })
+        .eq('id', h.id)
+      if (error) throw error
+
+      setEditingId(null)
+      await loadHistory()
+    } catch (err) {
+      console.error('Edit activity error:', err)
+      setEditError(err.message || 'No se pudo guardar el cambio.')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function handleDelete(h) {
+    if (!confirm('¿Eliminar este recorrido? Esta acción no se puede deshacer.')) return
+    setDeletingId(h.id)
+    try {
+      const { error } = await supabase.from('gps_activities').delete().eq('id', h.id)
+      if (error) throw error
+      setHistory((prev) => prev.filter((item) => item.id !== h.id))
+    } catch (err) {
+      console.error('Delete activity error:', err)
+      alert(err.message || 'No se pudo eliminar el recorrido.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -225,7 +307,7 @@ export function Recorridos() {
         await navigator.share({
           files: [file],
           title: 'Mi recorrido',
-          text: 'Mi recorrido con COMANDOS 🇦🇷',
+          text: 'Mi recorrido con Toro y Pampa 🇦🇷',
         })
       } else {
         const url = URL.createObjectURL(blob)
@@ -269,6 +351,27 @@ export function Recorridos() {
         <div className="mb-8">
           <div className="mb-3">
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+              Actividad
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {ACTIVITY_TYPES.map((a) => (
+                <button
+                  key={a.value}
+                  onClick={() => setActivityType(a.value)}
+                  className={`rounded-lg border px-2 py-3 text-center text-sm transition-colors ${
+                    activityType === a.value
+                      ? 'border-cobalt bg-cobalt/10 text-chalk'
+                      : 'border-line text-chalk-dim hover:border-cobalt/50'
+                  }`}
+                >
+                  <div className="mb-1 text-xl">{a.emoji}</div>
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
               Carga adicional (kg) — opcional, para rucking
             </label>
             <input
@@ -293,6 +396,9 @@ export function Recorridos() {
       {/* Estado: grabando en vivo */}
       {tracking && (
         <div className="mb-8">
+          <p className="mb-2 text-center text-sm text-muted">
+            {ACTIVITY_TYPES.find((a) => a.value === activityType)?.emoji} {activityLabel(activityType)}
+          </p>
           <div className="mb-3 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg border border-line bg-panel-raised p-3">
               <div className="font-mono text-xl font-bold text-chalk">{(liveDistance / 1000).toFixed(2)} km</div>
@@ -326,7 +432,9 @@ export function Recorridos() {
       {/* Estado: recorrido terminado, esperando confirmación para guardar */}
       {summary && (
         <div className="mb-8 rounded-lg border border-line bg-panel-raised p-5">
-          <h2 className="mb-3 text-lg font-semibold text-chalk">Resumen del recorrido</h2>
+          <h2 className="mb-3 text-lg font-semibold text-chalk">
+            {ACTIVITY_TYPES.find((a) => a.value === summary.activityType)?.emoji} Resumen — {activityLabel(summary.activityType)}
+          </h2>
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
               <div className="font-mono text-lg font-bold text-chalk">{(summary.distanceMeters / 1000).toFixed(2)} km</div>
@@ -372,6 +480,7 @@ export function Recorridos() {
                 avgSpeedKmh: summary.avgSpeedKmh,
                 calories: summary.calories,
                 loadKg: summary.loadKg,
+                activityLabel: activityLabel(summary.activityType),
                 dateLabel: summary.startedAt.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }),
               }, 'summary')}
               disabled={sharingId === 'summary'}
@@ -402,48 +511,149 @@ export function Recorridos() {
         <ul className="space-y-2">
           {history.map((h) => {
             const isOpen = expandedId === h.id
+            const isEditing = editingId === h.id
             return (
               <li key={h.id} className="rounded-lg border border-line bg-panel-raised">
-                <div className="flex items-center justify-between px-4 py-3">
+                <button
+                  onClick={() => setExpandedId(isOpen ? null : h.id)}
+                  className="block w-full px-4 pt-3 text-left"
+                >
+                  <div className="text-sm text-chalk">
+                    {new Date(h.started_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {' · '}
+                    {new Date(h.started_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className="font-mono text-xs text-muted">
+                    {(h.distance_meters / 1000).toFixed(2)} km · {formatDuration(h.duration_seconds)} · {Number(h.avg_speed_kmh).toFixed(1)} km/h
+                    {h.calories != null ? ` · ${h.calories} kcal` : ''}
+                    {h.load_kg > 0 ? ` · ${h.load_kg} kg carga` : ''}
+                    {' · '}{ACTIVITY_TYPES.find((a) => a.value === h.activity_type)?.emoji} {activityLabel(h.activity_type)}
+                  </div>
+                </button>
+
+                <div className="flex flex-wrap items-center gap-3 px-4 py-2 text-xs">
+                  <button
+                    onClick={() => handleShare({
+                      points: h.path || [],
+                      distanceMeters: h.distance_meters,
+                      durationLabel: formatDuration(h.duration_seconds),
+                      avgSpeedKmh: Number(h.avg_speed_kmh),
+                      calories: h.calories,
+                      loadKg: h.load_kg || 0,
+                      activityLabel: activityLabel(h.activity_type),
+                      dateLabel: new Date(h.started_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }),
+                    }, h.id)}
+                    disabled={sharingId === h.id}
+                    className="text-cobalt hover:underline disabled:opacity-50"
+                  >
+                    {sharingId === h.id ? '...' : 'Compartir'}
+                  </button>
+                  <button
+                    onClick={() => (isEditing ? cancelEdit() : startEdit(h))}
+                    className="text-chalk-dim hover:text-chalk"
+                  >
+                    {isEditing ? 'Cancelar' : 'Editar'}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(h)}
+                    disabled={deletingId === h.id}
+                    className="text-muted hover:text-danger disabled:opacity-50"
+                  >
+                    {deletingId === h.id ? 'Eliminando...' : 'Eliminar'}
+                  </button>
                   <button
                     onClick={() => setExpandedId(isOpen ? null : h.id)}
-                    className="flex-1 text-left"
+                    className="ml-auto text-muted"
                   >
-                    <div className="text-sm text-chalk">
-                      {new Date(h.started_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      {' · '}
-                      {new Date(h.started_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    <div className="font-mono text-xs text-muted">
-                      {(h.distance_meters / 1000).toFixed(2)} km · {formatDuration(h.duration_seconds)} · {Number(h.avg_speed_kmh).toFixed(1)} km/h
-                      {h.calories != null ? ` · ${h.calories} kcal` : ''}
-                      {h.load_kg > 0 ? ` · ${h.load_kg} kg carga` : ''}
-                    </div>
+                    {isOpen ? '− mapa' : '+ mapa'}
                   </button>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleShare({
-                        points: h.path || [],
-                        distanceMeters: h.distance_meters,
-                        durationLabel: formatDuration(h.duration_seconds),
-                        avgSpeedKmh: Number(h.avg_speed_kmh),
-                        calories: h.calories,
-                        loadKg: h.load_kg || 0,
-                        dateLabel: new Date(h.started_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }),
-                      }, h.id)}
-                      disabled={sharingId === h.id}
-                      className="text-xs text-cobalt hover:underline disabled:opacity-50"
-                    >
-                      {sharingId === h.id ? '...' : 'Compartir'}
-                    </button>
-                    <button
-                      onClick={() => setExpandedId(isOpen ? null : h.id)}
-                      className="text-muted"
-                    >
-                      {isOpen ? '−' : '+'}
-                    </button>
-                  </div>
                 </div>
+
+                {isEditing && (
+                  <div className="border-t border-line px-4 py-3">
+                    {editError && <p className="mb-2 text-sm text-danger">{editError}</p>}
+
+                    <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+                      Actividad
+                    </label>
+                    <select
+                      value={editActivityType}
+                      onChange={(e) => setEditActivityType(e.target.value)}
+                      className="mb-3 w-full rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
+                    >
+                      {ACTIVITY_TYPES.map((a) => (
+                        <option key={a.value} value={a.value}>{a.emoji} {a.label}</option>
+                      ))}
+                    </select>
+
+                    <div className="mb-3 grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+                          Distancia (km)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editDistanceKm}
+                          onChange={(e) => setEditDistanceKm(e.target.value)}
+                          className="w-full rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+                          Minutos
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={editMinutes}
+                          onChange={(e) => setEditMinutes(e.target.value)}
+                          className="w-full rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+                          Segundos
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          max="59"
+                          value={editSeconds}
+                          onChange={(e) => setEditSeconds(e.target.value)}
+                          className="w-full rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
+                      Carga (kg)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={editLoadKg}
+                        onChange={(e) => setEditLoadKg(e.target.value)}
+                        placeholder="0"
+                        className="flex-1 rounded border border-line bg-panel px-3 py-2 text-chalk outline-none focus:border-cobalt"
+                      />
+                      <button
+                        onClick={() => saveEdit(h)}
+                        disabled={editSaving}
+                        className="rounded bg-cobalt px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        {editSaving ? 'Guardando...' : 'Guardar'}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">La velocidad promedio y las calorías se recalculan solas a partir de estos valores.</p>
+                  </div>
+                )}
+
                 {isOpen && (
                   <div className="px-4 pb-4">
                     <RouteMap points={h.path || []} height={220} />

@@ -35,7 +35,7 @@ export async function generateShareCardBlob(activity) {
     // Si las fuentes no cargan a tiempo, seguimos con las del sistema.
   }
 
-  // Logo (Sol de Mayo + "Comandos.ar"), con el texto "COMANDOS" como
+  // Logo (Sol de Mayo + "Comandos.ar"), con el texto "TORO Y PAMPA" como
   // respaldo si por algún motivo la imagen no llega a cargar.
   let logoBottom = 130
   try {
@@ -50,12 +50,43 @@ export async function generateShareCardBlob(activity) {
     ctx.fillStyle = '#ffbf00'
     ctx.textAlign = 'center'
     ctx.font = "64px 'Pirata One', serif"
-    ctx.fillText('COMANDOS', WIDTH / 2, 130)
+    ctx.fillText('TORO Y PAMPA', WIDTH / 2, 130)
     logoBottom = 130
   }
 
+  // Etiqueta de tipo de actividad (Caminar / Correr / Rucking / Bicicleta)
+  if (activity.activityLabel) {
+    const badgeText = activity.activityLabel.toUpperCase()
+    ctx.font = "600 40px 'Big Shoulders Display', sans-serif"
+    const textWidth = ctx.measureText(badgeText).width
+    const paddingX = 36
+    const badgeWidth = textWidth + paddingX * 2
+    const badgeHeight = 64
+    const badgeX = (WIDTH - badgeWidth) / 2
+    const badgeY = logoBottom + 24
+    const radius = badgeHeight / 2
+
+    ctx.fillStyle = '#00a7e1'
+    ctx.beginPath()
+    ctx.moveTo(badgeX + radius, badgeY)
+    ctx.arcTo(badgeX + badgeWidth, badgeY, badgeX + badgeWidth, badgeY + badgeHeight, radius)
+    ctx.arcTo(badgeX + badgeWidth, badgeY + badgeHeight, badgeX, badgeY + badgeHeight, radius)
+    ctx.arcTo(badgeX, badgeY + badgeHeight, badgeX, badgeY, radius)
+    ctx.arcTo(badgeX, badgeY, badgeX + badgeWidth, badgeY, radius)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.fillStyle = '#ffffff'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(badgeText, WIDTH / 2, badgeY + badgeHeight / 2)
+    ctx.textBaseline = 'alphabetic'
+
+    logoBottom = badgeY + badgeHeight
+  }
+
   const mapTop = logoBottom + 40
-  const mapHeight = 580
+  const mapHeight = 480
   const mapLeft = 100
   const mapWidth = WIDTH - 200
 
@@ -119,8 +150,8 @@ export async function generateShareCardBlob(activity) {
     stats.push({ label: 'CARGA', value: `${activity.loadKg} kg` })
   }
 
-  const statsTop = mapTop + mapHeight + 90
-  const cellHeight = 150
+  const statsTop = mapTop + mapHeight + 70
+  const cellHeight = 140
   const cellWidth = (WIDTH - 160) / 2
 
   stats.forEach((s, i) => {
