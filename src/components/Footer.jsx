@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="border-t border-line bg-panel py-6">
+    <footer className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-panel py-3">
       <div className="mx-auto flex max-w-6xl items-center justify-center px-4">
         <a
           href="https://www.instagram.com/comandos.ar/"
