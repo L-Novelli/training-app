@@ -63,6 +63,19 @@ create table if not exists exercises (
 );
 
 -- ---------------------------------------------------------------------
+-- 4b. WARMUP ITEMS  (entrada en calor / movilidad de un día, con video
+-- de YouTube opcional para reproducir embebido en la app)
+-- ---------------------------------------------------------------------
+create table if not exists warmup_items (
+  id uuid primary key default gen_random_uuid(),
+  workout_id uuid not null references workouts(id) on delete cascade,
+  name text not null,
+  youtube_url text,
+  notes text,
+  order_index int not null default 0
+);
+
+-- ---------------------------------------------------------------------
 -- 5. ASSIGNMENTS  (which user is assigned which program)
 -- ---------------------------------------------------------------------
 create table if not exists assignments (
@@ -188,6 +201,7 @@ alter table profiles enable row level security;
 alter table programs enable row level security;
 alter table workouts enable row level security;
 alter table exercises enable row level security;
+alter table warmup_items enable row level security;
 alter table assignments enable row level security;
 alter table logs enable row level security;
 alter table exercise_completions enable row level security;
@@ -251,6 +265,21 @@ create policy "exercises: assigned users can read" on exercises
       select 1 from workouts w
       join assignments a on a.program_id = w.program_id
       where w.id = exercises.workout_id and a.user_id = auth.uid()
+    )
+  );
+
+-- warmup_items ---------------------------------------------------------------
+drop policy if exists "warmup_items: admin full access" on warmup_items;
+create policy "warmup_items: admin full access" on warmup_items
+  for all using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "warmup_items: assigned users can read" on warmup_items;
+create policy "warmup_items: assigned users can read" on warmup_items
+  for select using (
+    exists (
+      select 1 from workouts w
+      join assignments a on a.program_id = w.program_id
+      where w.id = warmup_items.workout_id and a.user_id = auth.uid()
     )
   );
 
