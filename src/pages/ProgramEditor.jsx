@@ -283,64 +283,7 @@ export function ProgramEditor() {
                       </button>
                     </div>
 
-                    <div className="space-y-2">
-                      {workout.exercises.map((ex) => (
-                        <div key={ex.id} className="grid grid-cols-12 items-center gap-2 rounded border border-line bg-panel-raised p-2">
-                          <input
-                            value={ex.name}
-                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
-                            onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
-                            placeholder="Nombre del ejercicio"
-                            className="col-span-4 bg-transparent text-sm text-chalk outline-none"
-                          />
-                          <input
-                            type="number"
-                            value={ex.sets ?? ''}
-                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'sets', e.target.value)}
-                            onBlur={(e) => saveExerciseField(ex.id, 'sets', Number(e.target.value) || null)}
-                            placeholder="Series"
-                            className="col-span-1 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                          />
-                          <input
-                            value={ex.reps ?? ''}
-                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'reps', e.target.value)}
-                            onBlur={(e) => saveExerciseField(ex.id, 'reps', e.target.value)}
-                            placeholder="Reps"
-                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                          />
-                          <input
-                            value={ex.target_weight ?? ''}
-                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'target_weight', e.target.value)}
-                            onBlur={(e) => saveExerciseField(ex.id, 'target_weight', e.target.value)}
-                            placeholder="Peso"
-                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                          />
-                          <input
-                            type="number"
-                            value={ex.rest_seconds ?? ''}
-                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'rest_seconds', e.target.value)}
-                            onBlur={(e) => saveExerciseField(ex.id, 'rest_seconds', Number(e.target.value) || null)}
-                            placeholder="Descanso (s)"
-                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
-                          />
-                          <button
-                            onClick={() => deleteExercise(workout.id, ex.id)}
-                            className="col-span-1 text-right text-xs text-muted hover:text-danger"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => addExercise(workout.id)}
-                      className="mt-3 text-sm text-cobalt hover:underline"
-                    >
-                      + Agregar ejercicio
-                    </button>
-
-                    <div className="mt-5 border-t border-line pt-4">
+                    <div>
                       <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brass">
                         Entrada en calor / Movilidad
                       </h3>
@@ -401,6 +344,63 @@ export function ProgramEditor() {
                         + Agregar ejercicio de entrada en calor
                       </button>
                     </div>
+
+                    <div className="mt-5 space-y-2 border-t border-line pt-4">
+                      {workout.exercises.map((ex) => (
+                        <div key={ex.id} className="grid grid-cols-12 items-center gap-2 rounded border border-line bg-panel-raised p-2">
+                          <input
+                            value={ex.name}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
+                            placeholder="Nombre del ejercicio"
+                            className="col-span-4 bg-transparent text-sm text-chalk outline-none"
+                          />
+                          <input
+                            type="number"
+                            value={ex.sets ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'sets', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'sets', Number(e.target.value) || null)}
+                            placeholder="Series"
+                            className="col-span-1 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <input
+                            value={ex.reps ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'reps', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'reps', e.target.value)}
+                            placeholder="Reps"
+                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <input
+                            value={ex.target_weight ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'target_weight', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'target_weight', e.target.value)}
+                            placeholder="Peso"
+                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <input
+                            type="number"
+                            value={ex.rest_seconds ?? ''}
+                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'rest_seconds', e.target.value)}
+                            onBlur={(e) => saveExerciseField(ex.id, 'rest_seconds', Number(e.target.value) || null)}
+                            placeholder="Descanso (s)"
+                            className="col-span-2 rounded bg-panel px-1 py-1 font-mono text-sm text-chalk outline-none"
+                          />
+                          <button
+                            onClick={() => deleteExercise(workout.id, ex.id)}
+                            className="col-span-1 text-right text-xs text-muted hover:text-danger"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => addExercise(workout.id)}
+                      className="mt-3 text-sm text-cobalt hover:underline"
+                    >
+                      + Agregar ejercicio
+                    </button>
                   </div>
                 ))}
 
