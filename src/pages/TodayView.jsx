@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { findCurrentDayIndex } from '../lib/progress'
 import { DIFFICULTY_OPTIONS } from '../lib/difficulty'
+import { toYouTubeEmbedUrl } from '../lib/youtube'
 
 export function TodayView({ programId }) {
   const { user } = useAuth()
@@ -24,7 +25,7 @@ export function TodayView({ programId }) {
         supabase.from('programs').select('*').eq('id', programId).single(),
         supabase
           .from('workouts')
-          .select('*, exercises(*)')
+          .select('*, exercises(*), warmup_items(*)')
           .eq('program_id', programId)
           .order('week_number', { ascending: true })
           .order('day_order', { ascending: true }),
@@ -35,6 +36,7 @@ export function TodayView({ programId }) {
       const sortedWorkouts = (workoutData || []).map((w) => ({
         ...w,
         exercises: (w.exercises || []).slice().sort((a, b) => a.order_index - b.order_index),
+        warmup_items: (w.warmup_items || []).slice().sort((a, b) => a.order_index - b.order_index),
       }))
 
       const allExerciseIds = sortedWorkouts.flatMap((w) => w.exercises.map((e) => e.id))
@@ -187,6 +189,36 @@ export function TodayView({ programId }) {
             Progreso general: día {currentIndex + 1} de {workouts.length}
           </p>
           {currentWorkout.notes && <p className="mb-4 text-sm text-chalk-dim">{currentWorkout.notes}</p>}
+
+          {currentWorkout.warmup_items.length > 0 && (
+            <div className="mb-6">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brass">
+                Entrada en calor / Movilidad
+              </h2>
+              <div className="space-y-3">
+                {currentWorkout.warmup_items.map((item) => {
+                  const embedUrl = toYouTubeEmbedUrl(item.youtube_url)
+                  return (
+                    <div key={item.id} className="rounded-lg border border-line bg-panel-raised p-3">
+                      <div className="text-chalk">{item.name}</div>
+                      {item.notes && <div className="mt-1 text-sm text-chalk-dim">{item.notes}</div>}
+                      {embedUrl && (
+                        <div className="mt-2 overflow-hidden rounded" style={{ aspectRatio: '16/9' }}>
+                          <iframe
+                            src={embedUrl}
+                            title={item.name}
+                            className="h-full w-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {currentWorkout.exercises.length === 0 ? (
             <p className="text-sm text-muted">Este día no tiene ejercicios cargados todavía.</p>

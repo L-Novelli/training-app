@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { DIFFICULTY_OPTIONS } from '../lib/difficulty'
+import { toYouTubeEmbedUrl } from '../lib/youtube'
 
 function ExerciseLogger({ exercise, userId, done, onToggle, busy, difficulty, onSetDifficulty }) {
   const [open, setOpen] = useState(false)
@@ -162,7 +163,7 @@ export function ProgramView() {
         supabase.from('programs').select('*').eq('id', programId).single(),
         supabase
           .from('workouts')
-          .select('*, exercises(*)')
+          .select('*, exercises(*), warmup_items(*)')
           .eq('program_id', programId)
           .order('week_number', { ascending: true })
           .order('day_order', { ascending: true }),
@@ -176,6 +177,7 @@ export function ProgramView() {
         sortedWorkouts = (w || []).map((wk) => ({
           ...wk,
           exercises: (wk.exercises || []).sort((a, b) => a.order_index - b.order_index),
+          warmup_items: (wk.warmup_items || []).sort((a, b) => a.order_index - b.order_index),
         }))
         setWorkouts(sortedWorkouts)
       }
@@ -269,6 +271,37 @@ export function ProgramView() {
                   <div key={workout.id}>
                     <h3 className="mb-2 font-display text-xl font-bold text-chalk">{workout.name}</h3>
                     {workout.notes && <p className="mb-2 text-sm text-chalk-dim">{workout.notes}</p>}
+
+                    {workout.warmup_items.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brass">
+                          Entrada en calor / Movilidad
+                        </h4>
+                        <div className="space-y-2">
+                          {workout.warmup_items.map((item) => {
+                            const embedUrl = toYouTubeEmbedUrl(item.youtube_url)
+                            return (
+                              <div key={item.id} className="rounded border border-line bg-panel-raised p-3">
+                                <div className="text-sm text-chalk">{item.name}</div>
+                                {item.notes && <div className="mt-1 text-xs text-chalk-dim">{item.notes}</div>}
+                                {embedUrl && (
+                                  <div className="mt-2 overflow-hidden rounded" style={{ aspectRatio: '16/9' }}>
+                                    <iframe
+                                      src={embedUrl}
+                                      title={item.name}
+                                      className="h-full w-full"
+                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                      allowFullScreen
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       {workout.exercises.map((ex) => (
                         <ExerciseLogger

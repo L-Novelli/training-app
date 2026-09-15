@@ -11,7 +11,7 @@ export function AdminUsers() {
     setLoading(true)
     const { data, error } = await supabase
       .from('profiles')
-      .select('*, assignments!assignments_user_id_fkey(count)')
+      .select('*, assignments(count)')
       .order('created_at', { ascending: false })
     if (error) setError(error.message)
     else setUsers(data)

@@ -54,6 +54,7 @@ export function Recorridos() {
   const intervalRef = useRef(null)
   const startTimeRef = useRef(null)
   const distanceRef = useRef(0)
+  const lastPointTimeRef = useRef(0)
   const wakeLockRef = useRef(null)
 
   const loadHistory = async () => {
@@ -121,20 +122,27 @@ export function Recorridos() {
 
   function startTracking() {
     setGeoError('')
-    if (!navigator.geolocation) {
-      setGeoError('Tu navegador no soporta geolocalización.')
-      return
-    }
 
     setPoints([])
     setLiveDistance(0)
     setElapsedSeconds(0)
     distanceRef.current = 0
+    lastPointTimeRef.current = 0
     startTimeRef.current = Date.now()
 
     intervalRef.current = setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000))
     }, 1000)
+
+    // Mínimo tiempo entre dos puntos registrados. Bajarlo demasiado (ej. a
+    // 15-30s) vuelve a "cortar esquinas" en calles con curvas y subestima
+    // la distancia real; 5s es el piso razonable que evita eso.
+    const MIN_POINT_INTERVAL_MS = 5000
+
+    if (!navigator.geolocation) {
+      setGeoError('Tu navegador no soporta geolocalización.')
+      return
+    }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -144,6 +152,12 @@ export function Recorridos() {
         // edificios altos, o con mala señal), descartamos el punto entero:
         // sumaría distancia falsa y ensuciaría el trazado en el mapa.
         if (accuracy != null && accuracy > 25) return
+
+        // Si todavía no pasó el intervalo mínimo desde el último punto
+        // aceptado, ignoramos esta actualización (así bajamos la cantidad
+        // de puntos que se guardan, sin perder demasiada precisión).
+        if (pos.timestamp - lastPointTimeRef.current < MIN_POINT_INTERVAL_MS) return
+        lastPointTimeRef.current = pos.timestamp
 
         setPoints((prev) => {
           const newPoint = { lat: latitude, lng: longitude, t: pos.timestamp }
@@ -160,11 +174,11 @@ export function Recorridos() {
         setLiveDistance(distanceRef.current)
       },
       (err) => setGeoError(mapGeoError(err)),
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 }
+      { enableHighAccuracy: true, maximumAge: MIN_POINT_INTERVAL_MS, timeout: 20000 }
     )
+    requestWakeLock()
 
     setTracking(true)
-    requestWakeLock()
   }
 
   function stopTracking() {
@@ -307,7 +321,7 @@ export function Recorridos() {
         await navigator.share({
           files: [file],
           title: 'Mi recorrido',
-          text: 'Mi recorrido con Toro y Pampa 🇦🇷',
+          text: 'Mi recorrido con Comandos 🇦🇷',
         })
       } else {
         const url = URL.createObjectURL(blob)
@@ -417,7 +431,7 @@ export function Recorridos() {
           <RouteMap points={points} live height={280} />
 
           <p className="mt-2 text-center text-xs text-muted">
-            Mantené esta pantalla abierta y desbloqueada mientras grabás — en iPhone, el registro se corta si bloqueás la pantalla o cambiás de app.
+            Mantené esta pantalla abierta y desbloqueada mientras grabás — el registro se corta si bloqueás la pantalla o cambiás de app.
           </p>
 
           <button

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { toYouTubeEmbedUrl } from '../lib/youtube'
 
 const emptyExercise = { name: '', sets: 3, reps: '8-10', target_weight: '', rest_seconds: 60, notes: '' }
 
@@ -23,7 +24,7 @@ export function ProgramEditor() {
       supabase.from('programs').select('*').eq('id', programId).single(),
       supabase
         .from('workouts')
-        .select('*, exercises(*)')
+        .select('*, exercises(*), warmup_items(*)')
         .eq('program_id', programId)
         .order('week_number', { ascending: true })
         .order('day_order', { ascending: true }),
@@ -36,6 +37,7 @@ export function ProgramEditor() {
       const sorted = (w || []).map((wk) => ({
         ...wk,
         exercises: (wk.exercises || []).sort((a, b) => a.order_index - b.order_index),
+        warmup_items: (wk.warmup_items || []).sort((a, b) => a.order_index - b.order_index),
       }))
       setWorkouts(sorted)
     }
@@ -67,10 +69,10 @@ export function ProgramEditor() {
     const { data, error } = await supabase
       .from('workouts')
       .insert({ program_id: programId, name: `Día ${dayCountInWeek + 1}`, week_number: weekNumber, day_order: dayCountInWeek })
-      .select('*, exercises(*)')
+      .select('*, exercises(*), warmup_items(*)')
       .single()
     if (error) setError(error.message)
-    else setWorkouts((w) => [...w, { ...data, exercises: [] }])
+    else setWorkouts((w) => [...w, { ...data, exercises: [], warmup_items: [] }])
   }
 
   const addWeek = async () => {
@@ -78,10 +80,10 @@ export function ProgramEditor() {
     const { data, error } = await supabase
       .from('workouts')
       .insert({ program_id: programId, name: 'Día 1', week_number: nextWeek, day_order: 0 })
-      .select('*, exercises(*)')
+      .select('*, exercises(*), warmup_items(*)')
       .single()
     if (error) setError(error.message)
-    else setWorkouts((w) => [...w, { ...data, exercises: [] }])
+    else setWorkouts((w) => [...w, { ...data, exercises: [], warmup_items: [] }])
   }
 
   const deleteWeek = async (weekNumber) => {
@@ -136,6 +138,36 @@ export function ProgramEditor() {
     if (error) { setError(error.message); return }
     setWorkouts((w) => w.map((wk) => wk.id !== workoutId ? wk : {
       ...wk, exercises: wk.exercises.filter((ex) => ex.id !== exerciseId),
+    }))
+  }
+
+  const addWarmupItem = async (workoutId) => {
+    const workout = workouts.find((w) => w.id === workoutId)
+    const { data, error } = await supabase
+      .from('warmup_items')
+      .insert({ workout_id: workoutId, order_index: workout.warmup_items.length, name: 'Ejercicio nuevo', youtube_url: '', notes: '' })
+      .select()
+      .single()
+    if (error) { setError(error.message); return }
+    setWorkouts((w) => w.map((wk) => wk.id === workoutId ? { ...wk, warmup_items: [...wk.warmup_items, data] } : wk))
+  }
+
+  const updateWarmupItemLocal = (workoutId, itemId, field, value) => {
+    setWorkouts((w) => w.map((wk) => wk.id !== workoutId ? wk : {
+      ...wk,
+      warmup_items: wk.warmup_items.map((it) => it.id === itemId ? { ...it, [field]: value } : it),
+    }))
+  }
+
+  const saveWarmupItemField = async (itemId, field, value) => {
+    await supabase.from('warmup_items').update({ [field]: value }).eq('id', itemId)
+  }
+
+  const deleteWarmupItem = async (workoutId, itemId) => {
+    const { error } = await supabase.from('warmup_items').delete().eq('id', itemId)
+    if (error) { setError(error.message); return }
+    setWorkouts((w) => w.map((wk) => wk.id !== workoutId ? wk : {
+      ...wk, warmup_items: wk.warmup_items.filter((it) => it.id !== itemId),
     }))
   }
 
@@ -307,6 +339,68 @@ export function ProgramEditor() {
                     >
                       + Agregar ejercicio
                     </button>
+
+                    <div className="mt-5 border-t border-line pt-4">
+                      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brass">
+                        Entrada en calor / Movilidad
+                      </h3>
+                      <div className="space-y-2">
+                        {workout.warmup_items.map((item) => {
+                          const embedUrl = toYouTubeEmbedUrl(item.youtube_url)
+                          return (
+                            <div key={item.id} className="rounded border border-line bg-panel-raised p-2">
+                              <div className="grid grid-cols-12 items-center gap-2">
+                                <input
+                                  value={item.name}
+                                  onChange={(e) => updateWarmupItemLocal(workout.id, item.id, 'name', e.target.value)}
+                                  onBlur={(e) => saveWarmupItemField(item.id, 'name', e.target.value)}
+                                  placeholder="Nombre (ej. Movilidad de cadera)"
+                                  className="col-span-5 bg-transparent text-sm text-chalk outline-none"
+                                />
+                                <input
+                                  value={item.youtube_url ?? ''}
+                                  onChange={(e) => updateWarmupItemLocal(workout.id, item.id, 'youtube_url', e.target.value)}
+                                  onBlur={(e) => saveWarmupItemField(item.id, 'youtube_url', e.target.value)}
+                                  placeholder="Link de YouTube (opcional)"
+                                  className="col-span-6 rounded bg-panel px-2 py-1 text-sm text-chalk outline-none"
+                                />
+                                <button
+                                  onClick={() => deleteWarmupItem(workout.id, item.id)}
+                                  className="col-span-1 text-right text-xs text-muted hover:text-danger"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              <textarea
+                                value={item.notes ?? ''}
+                                onChange={(e) => updateWarmupItemLocal(workout.id, item.id, 'notes', e.target.value)}
+                                onBlur={(e) => saveWarmupItemField(item.id, 'notes', e.target.value)}
+                                placeholder="Notas (opcional)"
+                                rows={1}
+                                className="mt-2 w-full resize-none rounded bg-panel px-2 py-1 text-xs text-chalk-dim outline-none"
+                              />
+                              {embedUrl && (
+                                <div className="mt-2 overflow-hidden rounded" style={{ aspectRatio: '16/9' }}>
+                                  <iframe
+                                    src={embedUrl}
+                                    title={item.name}
+                                    className="h-full w-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <button
+                        onClick={() => addWarmupItem(workout.id)}
+                        className="mt-3 text-sm text-cobalt hover:underline"
+                      >
+                        + Agregar ejercicio de entrada en calor
+                      </button>
+                    </div>
                   </div>
                 ))}
 
