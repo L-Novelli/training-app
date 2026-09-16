@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { haversineMeters, estimateCalories, formatDuration } from '../lib/geo'
 import { ACTIVITY_TYPES, activityLabel } from '../lib/activity'
 import { RouteMap } from '../components/RouteMap'
 import { generateShareCardBlob } from '../lib/shareCard'
+
+// Solo existe/funciona dentro de la app nativa (Capacitor). En el navegador
+// (la versión de GitHub Pages) seguimos usando navigator.geolocation, que es
+// lo único disponible ahí — ver isNative más abajo.
+const BackgroundGeolocation = registerPlugin('BackgroundGeolocation')
 
 function mapGeoError(err) {
   switch (err.code) {
@@ -22,6 +28,7 @@ function mapGeoError(err) {
 
 export function Recorridos() {
   const { user, profile } = useAuth()
+  const isNative = Capacitor.isNativePlatform()
 
   const [tracking, setTracking] = useState(false)
   const [points, setPoints] = useState([])
@@ -51,10 +58,10 @@ export function Recorridos() {
   const [deletingId, setDeletingId] = useState(null)
 
   const watchIdRef = useRef(null)
+  const bgWatcherIdRef = useRef(null)
   const intervalRef = useRef(null)
   const startTimeRef = useRef(null)
   const distanceRef = useRef(0)
-  const lastPointTimeRef = useRef(0)
   const wakeLockRef = useRef(null)
 
   const loadHistory = async () => {
@@ -81,6 +88,9 @@ export function Recorridos() {
     // Por las dudas, si el componente se desmonta con el GPS todavía activo.
     return () => {
       if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current)
+      if (bgWatcherIdRef.current != null) {
+        BackgroundGeolocation.removeWatcher({ id: bgWatcherIdRef.current }).catch(() => {})
+      }
       if (intervalRef.current) clearInterval(intervalRef.current)
       releaseWakeLock()
     }
@@ -127,61 +137,100 @@ export function Recorridos() {
     setLiveDistance(0)
     setElapsedSeconds(0)
     distanceRef.current = 0
-    lastPointTimeRef.current = 0
     startTimeRef.current = Date.now()
 
     intervalRef.current = setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000))
     }, 1000)
 
-    // Mínimo tiempo entre dos puntos registrados. Bajarlo demasiado (ej. a
-    // 15-30s) vuelve a "cortar esquinas" en calles con curvas y subestima
-    // la distancia real; 5s es el piso razonable que evita eso.
-    const MIN_POINT_INTERVAL_MS = 5000
+    // Procesa cada posición nueva, venga del navegador o del plugin nativo.
+    function handleNewPoint(latitude, longitude, accuracy, timestampMs) {
+      // Si el GPS reporta muy mala precisión (típico en interiores, entre
+      // edificios altos, o con mala señal), descartamos el punto entero:
+      // sumaría distancia falsa y ensuciaría el trazado en el mapa.
+      if (accuracy != null && accuracy > 25) return
 
-    if (!navigator.geolocation) {
-      setGeoError('Tu navegador no soporta geolocalización.')
-      return
+      setPoints((prev) => {
+        const newPoint = { lat: latitude, lng: longitude, t: timestampMs }
+        if (prev.length > 0) {
+          const last = prev[prev.length - 1]
+          const d = haversineMeters(last.lat, last.lng, newPoint.lat, newPoint.lng)
+          // Filtro mínimo, solo para el ruido de GPS al estar parado (no
+          // para movimiento real): con el filtro de precisión de arriba
+          // ya alcanza, así que este umbral es chico a propósito.
+          if (d > 1) distanceRef.current += d
+        }
+        return [...prev, newPoint]
+      })
+      setLiveDistance(distanceRef.current)
     }
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude, accuracy } = pos.coords
-
-        // Si el GPS reporta muy mala precisión (típico en interiores, entre
-        // edificios altos, o con mala señal), descartamos el punto entero:
-        // sumaría distancia falsa y ensuciaría el trazado en el mapa.
-        if (accuracy != null && accuracy > 25) return
-
-        // Si todavía no pasó el intervalo mínimo desde el último punto
-        // aceptado, ignoramos esta actualización (así bajamos la cantidad
-        // de puntos que se guardan, sin perder demasiada precisión).
-        if (pos.timestamp - lastPointTimeRef.current < MIN_POINT_INTERVAL_MS) return
-        lastPointTimeRef.current = pos.timestamp
-
-        setPoints((prev) => {
-          const newPoint = { lat: latitude, lng: longitude, t: pos.timestamp }
-          if (prev.length > 0) {
-            const last = prev[prev.length - 1]
-            const d = haversineMeters(last.lat, last.lng, newPoint.lat, newPoint.lng)
-            // Filtro mínimo, solo para el ruido de GPS al estar parado (no
-            // para movimiento real): con el filtro de precisión de arriba
-            // ya alcanza, así que este umbral es chico a propósito.
-            if (d > 1) distanceRef.current += d
+    if (isNative) {
+      // App nativa (Android vía Capacitor): usa el plugin de background
+      // geolocation, que sigue recibiendo ubicación aunque se bloquee la
+      // pantalla (muestra una notificación persistente mientras tanto, como
+      // pide Android para dejar correr un servicio en primer plano).
+      // distanceFilter: 0 = sin límite mínimo de distancia entre puntos,
+      // para la mayor frecuencia/precisión posible (a costa de batería).
+      BackgroundGeolocation.addWatcher(
+        {
+          backgroundMessage: 'Toca para volver a la app. Cancelá el recorrido ahí para dejar de grabar.',
+          backgroundTitle: 'Registrando tu recorrido — Comandos',
+          requestPermissions: true,
+          stale: false,
+          distanceFilter: 0,
+        },
+        (location, err) => {
+          if (err) {
+            if (err.code === 'NOT_AUTHORIZED') {
+              setGeoError('No diste permiso de ubicación (o falta el permiso "Permitir siempre"). Activalo en Configuración del sistema para poder registrar el recorrido con la pantalla bloqueada.')
+            } else {
+              setGeoError('Ocurrió un error al acceder a tu ubicación.')
+            }
+            return
           }
-          return [...prev, newPoint]
+          if (location) {
+            handleNewPoint(location.latitude, location.longitude, location.accuracy, location.time)
+          }
+        }
+      )
+        .then((id) => { bgWatcherIdRef.current = id })
+        .catch((err) => {
+          console.error('BackgroundGeolocation error:', err)
+          setGeoError('No se pudo iniciar el registro de ubicación en segundo plano.')
         })
-        setLiveDistance(distanceRef.current)
-      },
-      (err) => setGeoError(mapGeoError(err)),
-      { enableHighAccuracy: true, maximumAge: MIN_POINT_INTERVAL_MS, timeout: 20000 }
-    )
-    requestWakeLock()
+    } else {
+      // Navegador normal (la versión web / GitHub Pages): solo funciona con
+      // la app abierta y la pantalla desbloqueada. Sin límite de intervalo:
+      // aceptamos cada actualización que mande el GPS, para la mayor
+      // frecuencia/precisión posible (a costa de batería).
+      if (!navigator.geolocation) {
+        setGeoError('Tu navegador no soporta geolocalización.')
+        return
+      }
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude, accuracy } = pos.coords
+          handleNewPoint(latitude, longitude, accuracy, pos.timestamp)
+        },
+        (err) => setGeoError(mapGeoError(err)),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+      )
+      requestWakeLock()
+    }
 
     setTracking(true)
   }
 
-  function stopTracking() {
+  async function stopTracking() {
+    if (isNative && bgWatcherIdRef.current != null) {
+      try {
+        await BackgroundGeolocation.removeWatcher({ id: bgWatcherIdRef.current })
+      } catch (err) {
+        console.error('Error al detener BackgroundGeolocation:', err)
+      }
+      bgWatcherIdRef.current = null
+    }
     if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current)
     if (intervalRef.current) clearInterval(intervalRef.current)
     setTracking(false)
@@ -430,9 +479,15 @@ export function Recorridos() {
 
           <RouteMap points={points} live height={280} />
 
-          <p className="mt-2 text-center text-xs text-muted">
-            Mantené esta pantalla abierta y desbloqueada mientras grabás — el registro se corta si bloqueás la pantalla o cambiás de app.
-          </p>
+          {isNative ? (
+            <p className="mt-2 text-center text-xs text-muted">
+              Podés bloquear la pantalla o cambiar de app: el registro sigue en segundo plano. Vas a ver una notificación mientras esté activo.
+            </p>
+          ) : (
+            <p className="mt-2 text-center text-xs text-muted">
+              Mantené esta pantalla abierta y desbloqueada mientras grabás — el registro se corta si bloqueás la pantalla o cambiás de app.
+            </p>
+          )}
 
           <button
             onClick={stopTracking}
