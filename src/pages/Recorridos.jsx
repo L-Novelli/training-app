@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import { Share } from '@capacitor/share'
+import { Filesystem, Directory } from '@capacitor/filesystem'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { haversineMeters, estimateCalories, formatDuration } from '../lib/geo'
@@ -359,28 +361,56 @@ export function Recorridos() {
     }
   }
 
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result.split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
   async function handleShare(activityData, id) {
     setShareError('')
     setSharingId(id)
     try {
       const blob = await generateShareCardBlob(activityData)
-      const file = new File([blob], 'recorrido.png', { type: 'image/png' })
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
+      if (Capacitor.isNativePlatform()) {
+        // En la app nativa, navigator.share/navigator.canShare del navegador
+        // no funcionan bien para archivos dentro del WebView. Escribimos el
+        // PNG a un archivo temporal y usamos el plugin nativo de Share, que
+        // sí abre el panel real de compartir de Android.
+        const base64 = await blobToBase64(blob)
+        const fileName = `recorrido-${Date.now()}.png`
+        const written = await Filesystem.writeFile({
+          path: fileName,
+          data: base64,
+          directory: Directory.Cache,
+        })
+        await Share.share({
           title: 'Mi recorrido',
           text: 'Mi recorrido con Comandos 🇦🇷',
+          url: written.uri,
         })
       } else {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'recorrido.png'
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        URL.revokeObjectURL(url)
+        const file = new File([blob], 'recorrido.png', { type: 'image/png' })
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Mi recorrido',
+            text: 'Mi recorrido con Comandos 🇦🇷',
+          })
+        } else {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = 'recorrido.png'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          URL.revokeObjectURL(url)
+        }
       }
     } catch (err) {
       if (err.name !== 'AbortError') {

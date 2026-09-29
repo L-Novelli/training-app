@@ -5,6 +5,29 @@ import { toYouTubeEmbedUrl } from '../lib/youtube'
 
 const emptyExercise = { name: '', sets: 3, reps: '8-10', target_weight: '', rest_seconds: 60, notes: '' }
 
+function MoveButtons({ onUp, onDown, disableUp, disableDown }) {
+  return (
+    <div className="flex flex-col">
+      <button
+        onClick={onUp}
+        disabled={disableUp}
+        aria-label="Mover hacia arriba"
+        className="leading-none text-muted hover:text-cobalt disabled:cursor-not-allowed disabled:opacity-20"
+      >
+        ▲
+      </button>
+      <button
+        onClick={onDown}
+        disabled={disableDown}
+        aria-label="Mover hacia abajo"
+        className="leading-none text-muted hover:text-cobalt disabled:cursor-not-allowed disabled:opacity-20"
+      >
+        ▼
+      </button>
+    </div>
+  )
+}
+
 export function ProgramEditor() {
   const { id: programId } = useParams()
   const navigate = useNavigate()
@@ -111,6 +134,29 @@ export function ProgramEditor() {
     else setWorkouts((w) => w.filter((wk) => wk.id !== workoutId))
   }
 
+  const moveDay = async (weekNumber, workoutId, direction) => {
+    const days = workouts
+      .filter((w) => w.week_number === weekNumber)
+      .sort((a, b) => a.day_order - b.day_order)
+    const idx = days.findIndex((d) => d.id === workoutId)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= days.length) return
+
+    const a = days[idx]
+    const b = days[swapIdx]
+
+    setWorkouts((w) => w.map((wk) => {
+      if (wk.id === a.id) return { ...wk, day_order: b.day_order }
+      if (wk.id === b.id) return { ...wk, day_order: a.day_order }
+      return wk
+    }))
+
+    await Promise.all([
+      supabase.from('workouts').update({ day_order: b.day_order }).eq('id', a.id),
+      supabase.from('workouts').update({ day_order: a.day_order }).eq('id', b.id),
+    ])
+  }
+
   const addExercise = async (workoutId) => {
     const workout = workouts.find((w) => w.id === workoutId)
     const { data, error } = await supabase
@@ -141,6 +187,27 @@ export function ProgramEditor() {
     }))
   }
 
+  const moveExercise = async (workoutId, exerciseId, direction) => {
+    const workout = workouts.find((w) => w.id === workoutId)
+    const idx = workout.exercises.findIndex((ex) => ex.id === exerciseId)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= workout.exercises.length) return
+
+    const a = workout.exercises[idx]
+    const b = workout.exercises[swapIdx]
+    const newExercises = [...workout.exercises]
+    newExercises[idx] = { ...b, order_index: a.order_index }
+    newExercises[swapIdx] = { ...a, order_index: b.order_index }
+    newExercises.sort((x, y) => x.order_index - y.order_index)
+
+    setWorkouts((w) => w.map((wk) => wk.id === workoutId ? { ...wk, exercises: newExercises } : wk))
+
+    await Promise.all([
+      supabase.from('exercises').update({ order_index: b.order_index }).eq('id', a.id),
+      supabase.from('exercises').update({ order_index: a.order_index }).eq('id', b.id),
+    ])
+  }
+
   const addWarmupItem = async (workoutId) => {
     const workout = workouts.find((w) => w.id === workoutId)
     const { data, error } = await supabase
@@ -169,6 +236,27 @@ export function ProgramEditor() {
     setWorkouts((w) => w.map((wk) => wk.id !== workoutId ? wk : {
       ...wk, warmup_items: wk.warmup_items.filter((it) => it.id !== itemId),
     }))
+  }
+
+  const moveWarmupItem = async (workoutId, itemId, direction) => {
+    const workout = workouts.find((w) => w.id === workoutId)
+    const idx = workout.warmup_items.findIndex((it) => it.id === itemId)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= workout.warmup_items.length) return
+
+    const a = workout.warmup_items[idx]
+    const b = workout.warmup_items[swapIdx]
+    const newItems = [...workout.warmup_items]
+    newItems[idx] = { ...b, order_index: a.order_index }
+    newItems[swapIdx] = { ...a, order_index: b.order_index }
+    newItems.sort((x, y) => x.order_index - y.order_index)
+
+    setWorkouts((w) => w.map((wk) => wk.id === workoutId ? { ...wk, warmup_items: newItems } : wk))
+
+    await Promise.all([
+      supabase.from('warmup_items').update({ order_index: b.order_index }).eq('id', a.id),
+      supabase.from('warmup_items').update({ order_index: a.order_index }).eq('id', b.id),
+    ])
   }
 
   const toggleAssignment = async (userId) => {
@@ -266,15 +354,23 @@ export function ProgramEditor() {
                   </button>
                 </div>
 
-                {days.map((workout) => (
+                {days.map((workout, dayIdx) => (
                   <div key={workout.id} className="rounded-lg border border-line bg-panel p-4">
                     <div className="mb-3 flex items-center justify-between gap-2">
-                      <input
-                        value={workout.name}
-                        onChange={(e) => updateWorkoutName(workout.id, e.target.value)}
-                        onBlur={(e) => saveWorkoutName(workout.id, e.target.value)}
-                        className="bg-transparent font-display text-xl font-bold text-chalk outline-none"
-                      />
+                      <div className="flex items-center gap-2">
+                        <MoveButtons
+                          onUp={() => moveDay(weekNumber, workout.id, 'up')}
+                          onDown={() => moveDay(weekNumber, workout.id, 'down')}
+                          disableUp={dayIdx === 0}
+                          disableDown={dayIdx === days.length - 1}
+                        />
+                        <input
+                          value={workout.name}
+                          onChange={(e) => updateWorkoutName(workout.id, e.target.value)}
+                          onBlur={(e) => saveWorkoutName(workout.id, e.target.value)}
+                          className="bg-transparent font-display text-xl font-bold text-chalk outline-none"
+                        />
+                      </div>
                       <button
                         onClick={() => deleteWorkout(workout.id)}
                         className="text-xs text-muted hover:text-danger"
@@ -288,17 +384,23 @@ export function ProgramEditor() {
                         Entrada en calor / Movilidad
                       </h3>
                       <div className="space-y-2">
-                        {workout.warmup_items.map((item) => {
+                        {workout.warmup_items.map((item, itemIdx) => {
                           const embedUrl = toYouTubeEmbedUrl(item.youtube_url)
                           return (
                             <div key={item.id} className="rounded border border-line bg-panel-raised p-2">
                               <div className="grid grid-cols-12 items-center gap-2">
+                                <MoveButtons
+                                  onUp={() => moveWarmupItem(workout.id, item.id, 'up')}
+                                  onDown={() => moveWarmupItem(workout.id, item.id, 'down')}
+                                  disableUp={itemIdx === 0}
+                                  disableDown={itemIdx === workout.warmup_items.length - 1}
+                                />
                                 <input
                                   value={item.name}
                                   onChange={(e) => updateWarmupItemLocal(workout.id, item.id, 'name', e.target.value)}
                                   onBlur={(e) => saveWarmupItemField(item.id, 'name', e.target.value)}
                                   placeholder="Nombre (ej. Movilidad de cadera)"
-                                  className="col-span-5 bg-transparent text-sm text-chalk outline-none"
+                                  className="col-span-4 bg-transparent text-sm text-chalk outline-none"
                                 />
                                 <input
                                   value={item.youtube_url ?? ''}
@@ -346,14 +448,20 @@ export function ProgramEditor() {
                     </div>
 
                     <div className="mt-5 space-y-2 border-t border-line pt-4">
-                      {workout.exercises.map((ex) => (
+                      {workout.exercises.map((ex, exIdx) => (
                         <div key={ex.id} className="grid grid-cols-12 items-center gap-2 rounded border border-line bg-panel-raised p-2">
+                          <MoveButtons
+                            onUp={() => moveExercise(workout.id, ex.id, 'up')}
+                            onDown={() => moveExercise(workout.id, ex.id, 'down')}
+                            disableUp={exIdx === 0}
+                            disableDown={exIdx === workout.exercises.length - 1}
+                          />
                           <input
                             value={ex.name}
                             onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
                             onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
                             placeholder="Nombre del ejercicio"
-                            className="col-span-4 bg-transparent text-sm text-chalk outline-none"
+                            className="col-span-3 bg-transparent text-sm text-chalk outline-none"
                           />
                           <input
                             type="number"
