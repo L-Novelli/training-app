@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabaseClient'
 import { AdminPrograms } from './AdminPrograms'
 import { UserDashboard } from './UserDashboard'
 import { TodayView } from './TodayView'
-import { DailyPopup } from '../components/DailyPopup'
 
 export function Home() {
   const { user, isAdmin } = useAuth()
@@ -32,18 +31,6 @@ export function Home() {
 
   // Sin rutinas asignadas, o más de una: mostramos la lista (como antes).
   // Con exactamente una rutina asignada: vamos directo al día actual.
-  if (!assignedProgramIds || assignedProgramIds.length !== 1) {
-    return (
-      <>
-        <DailyPopup />
-        <UserDashboard />
-      </>
-    )
-  }
-  return (
-    <>
-      <DailyPopup />
-      <TodayView programId={assignedProgramIds[0]} />
-    </>
-  )
+  if (!assignedProgramIds || assignedProgramIds.length !== 1) return <UserDashboard />
+  return <TodayView programId={assignedProgramIds[0]} />
 }

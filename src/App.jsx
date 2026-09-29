@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Navbar } from './components/Navbar'
+import { DailyPopup } from './components/DailyPopup'
 import { Footer } from './components/Footer'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
@@ -19,6 +20,7 @@ const Recorridos = lazy(() => import('./pages/Recorridos').then((m) => ({ defaul
 function Layout({ children }) {
   return (
     <div className="flex min-h-screen flex-col bg-ink">
+      <DailyPopup />
       <Navbar />
       <div className="flex-1 pb-16">{children}</div>
       <Footer />
