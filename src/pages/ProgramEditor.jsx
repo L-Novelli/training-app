@@ -41,6 +41,14 @@ export function ProgramEditor() {
   const [allUsers, setAllUsers] = useState([])
   const [assignedUserIds, setAssignedUserIds] = useState(new Set())
 
+  // biblioteca de ejercicios, para autocompletar al escribir el nombre
+  const [exerciseLibrary, setExerciseLibrary] = useState([])
+
+  const loadExerciseLibrary = async () => {
+    const { data } = await supabase.from('exercise_library').select('name').order('name')
+    setExerciseLibrary((data || []).map((r) => r.name))
+  }
+
   const loadAll = async () => {
     setLoading(true)
     const [{ data: prog, error: progErr }, { data: w, error: wErr }] = await Promise.all([
@@ -77,6 +85,7 @@ export function ProgramEditor() {
   }
 
   useEffect(() => { loadAll() }, [programId])
+  useEffect(() => { loadExerciseLibrary() }, [])
   useEffect(() => { if (tab === 'assign') loadAssignments() }, [tab, programId])
 
   const updateProgramField = async (field, value) => {
@@ -177,6 +186,19 @@ export function ProgramEditor() {
 
   const saveExerciseField = async (exerciseId, field, value) => {
     await supabase.from('exercises').update({ [field]: value }).eq('id', exerciseId)
+
+    // Si es un nombre nuevo que no está en la biblioteca, lo agregamos para
+    // que quede disponible la próxima vez (autocompletado).
+    if (field === 'name') {
+      const trimmed = value.trim()
+      const alreadyExists = exerciseLibrary.some((n) => n.toLowerCase() === trimmed.toLowerCase())
+      if (trimmed && !alreadyExists) {
+        const { error } = await supabase
+          .from('exercise_library')
+          .upsert({ name: trimmed }, { onConflict: 'name' })
+        if (!error) setExerciseLibrary((prev) => [...prev, trimmed].sort((a, b) => a.localeCompare(b)))
+      }
+    }
   }
 
   const deleteExercise = async (workoutId, exerciseId) => {
@@ -461,6 +483,7 @@ export function ProgramEditor() {
                             onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
                             onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
                             placeholder="Nombre del ejercicio"
+                            list="exercise-library-options"
                             className="col-span-3 bg-transparent text-sm text-chalk outline-none"
                           />
                           <input
@@ -554,6 +577,12 @@ export function ProgramEditor() {
           )}
         </div>
       )}
+
+      <datalist id="exercise-library-options">
+        {exerciseLibrary.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
     </div>
   )
 }

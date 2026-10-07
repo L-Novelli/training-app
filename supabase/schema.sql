@@ -129,6 +129,35 @@ create table if not exists playlists (
 );
 
 -- ---------------------------------------------------------------------
+-- 7b. EXERCISE_LIBRARY  (catálogo de nombres de ejercicio reutilizables,
+-- para autocompletar al armar una rutina. Solo el admin la ve/edita.)
+-- ---------------------------------------------------------------------
+create table if not exists exercise_library (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_by uuid references profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+insert into exercise_library (name) values
+  ('Sentadilla'), ('Sentadilla búlgara'), ('Sentadilla frontal'), ('Sentadilla goblet'),
+  ('Peso muerto'), ('Peso muerto rumano'), ('Peso muerto sumo'), ('Hip thrust'),
+  ('Press banca'), ('Press banca inclinado'), ('Press militar'), ('Press de hombros con mancuernas'),
+  ('Dominadas'), ('Dominadas supinas'), ('Remo con barra'), ('Remo con mancuerna'),
+  ('Remo en polea'), ('Jalón al pecho'), ('Fondos en paralelas'), ('Flexiones de brazos'),
+  ('Flexiones diamante'), ('Curl de bíceps con barra'), ('Curl de bíceps con mancuernas'),
+  ('Extensión de tríceps en polea'), ('Press francés'), ('Elevaciones laterales'),
+  ('Elevaciones frontales'), ('Zancadas'), ('Zancadas caminando'), ('Step up'),
+  ('Prensa de piernas'), ('Extensión de cuádriceps'), ('Curl femoral'), ('Gemelos de pie'),
+  ('Plancha abdominal'), ('Plancha lateral'), ('Abdominales crunch'), ('Elevación de piernas'),
+  ('Mountain climbers'), ('Burpees'), ('Kettlebell swing'), ('Thrusters'),
+  ('Farmer''s walk'), ('Sled push'), ('Battle ropes'), ('Box jumps'),
+  ('Saltos al cajón'), ('Sprints'), ('Remo en máquina (cardio)'), ('Bicicleta fija'),
+  ('Escalador (stair climber)'), ('Rucking con mochila cargada'), ('Caminata con lastre'),
+  ('Wall balls'), ('Clean and jerk'), ('Snatch'), ('Pull-ups lastradas'), ('Hollow body hold')
+on conflict (name) do nothing;
+
+-- ---------------------------------------------------------------------
 -- 8. GPS_ACTIVITIES  (recorridos guardados por GPS: cardio, caminatas, etc.)
 -- ---------------------------------------------------------------------
 create table if not exists gps_activities (
@@ -206,6 +235,7 @@ alter table assignments enable row level security;
 alter table logs enable row level security;
 alter table exercise_completions enable row level security;
 alter table playlists enable row level security;
+alter table exercise_library enable row level security;
 alter table gps_activities enable row level security;
 
 -- profiles ---------------------------------------------------------------
@@ -313,6 +343,11 @@ create policy "completions: admin reads all" on exercise_completions
 -- playlists ------------------------------------------------------------------
 drop policy if exists "playlists: admin full access" on playlists;
 create policy "playlists: admin full access" on playlists
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- exercise_library -------------------------------------------------------
+drop policy if exists "exercise_library: admin full access" on exercise_library;
+create policy "exercise_library: admin full access" on exercise_library
   for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "playlists: authenticated users read" on playlists;
