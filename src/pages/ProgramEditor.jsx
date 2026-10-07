@@ -43,6 +43,7 @@ export function ProgramEditor() {
 
   // biblioteca de ejercicios, para autocompletar al escribir el nombre
   const [exerciseLibrary, setExerciseLibrary] = useState([])
+  const [suggestionsForId, setSuggestionsForId] = useState(null)
 
   const loadExerciseLibrary = async () => {
     const { data } = await supabase.from('exercise_library').select('name').order('name')
@@ -478,14 +479,52 @@ export function ProgramEditor() {
                             disableUp={exIdx === 0}
                             disableDown={exIdx === workout.exercises.length - 1}
                           />
-                          <input
-                            value={ex.name}
-                            onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
-                            onBlur={(e) => saveExerciseField(ex.id, 'name', e.target.value)}
-                            placeholder="Nombre del ejercicio"
-                            list="exercise-library-options"
-                            className="col-span-3 bg-transparent text-sm text-chalk outline-none"
-                          />
+                          <div className="relative col-span-3">
+                            <input
+                              value={ex.name}
+                              onChange={(e) => updateExerciseLocal(workout.id, ex.id, 'name', e.target.value)}
+                              onFocus={() => setSuggestionsForId(ex.id)}
+                              onBlur={(e) => {
+                                // Pequeña demora para que el click en una sugerencia
+                                // llegue a registrarse antes de cerrar el desplegable.
+                                setTimeout(() => setSuggestionsForId(null), 150)
+                                saveExerciseField(ex.id, 'name', e.target.value)
+                              }}
+                              placeholder="Nombre del ejercicio"
+                              autoComplete="off"
+                              className="w-full bg-transparent text-sm text-chalk outline-none"
+                            />
+                            {suggestionsForId === ex.id && (() => {
+                              const typed = ex.name.trim().toLowerCase()
+                              const isDefaultName = typed === '' || typed === 'ejercicio nuevo'
+                              const matches = (
+                                isDefaultName
+                                  ? exerciseLibrary
+                                  : exerciseLibrary.filter((name) => name.toLowerCase().includes(typed))
+                              ).slice(0, 8)
+                              if (matches.length === 0) return null
+                              return (
+                                <ul className="absolute left-0 top-full z-20 mt-1 w-64 max-w-[80vw] rounded border border-line bg-panel shadow-xl">
+                                  {matches.map((name) => (
+                                    <li key={name}>
+                                      <button
+                                        type="button"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                          updateExerciseLocal(workout.id, ex.id, 'name', name)
+                                          saveExerciseField(ex.id, 'name', name)
+                                          setSuggestionsForId(null)
+                                        }}
+                                        className="block w-full px-3 py-2 text-left text-sm text-chalk hover:bg-panel-raised"
+                                      >
+                                        {name}
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )
+                            })()}
+                          </div>
                           <input
                             type="number"
                             value={ex.sets ?? ''}
@@ -578,11 +617,6 @@ export function ProgramEditor() {
         </div>
       )}
 
-      <datalist id="exercise-library-options">
-        {exerciseLibrary.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
     </div>
   )
 }
